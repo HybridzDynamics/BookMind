@@ -1,0 +1,23 @@
+# BookMind Python dependencies
+# Python 3.10 - 3.13 recommended
+
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.3
+joblib>=1.3
+
+# API
+fastapi>=0.110
+uvicorn[standard]>=0.29
+
+# Streamlit dashboard
+streamlit>=1.35
+
+# Charts
+matplotlib>=3.8
+seaborn>=0.13
+
+# Testing
+pytest>=8.0
+httpx>=0.27

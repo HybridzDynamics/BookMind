@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BookMind — Intelligent Book Recommendation System</title>
+    <meta name="description" content="BookMind demonstrates four ML-powered recommendation models: Popularity, Content-Based, Collaborative Filtering, and Hybrid ensemble." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- ========== HEADER ========== -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand-wrap">
+          <div class="brand-mark" aria-hidden="true">📚</div>
+          <div class="brand-text">
+            <p class="eyebrow">Intelligent Book Recommendation System</p>
+            <h1>BookMind</h1>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="status-pill" id="apiStatus">Connecting…</div>
+          <a href="http://127.0.0.1:8000/docs" target="_blank" class="docs-link" id="swaggerLink">Swagger API ↗</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========== NAV TABS ========== -->
+    <nav class="tab-nav" role="navigation" aria-label="Section navigation">
+      <div class="tab-nav-inner">
+        <button class="tab-btn active" data-tab="overview" id="tab-overview">Overview</button>
+        <button class="tab-btn" data-tab="demo" id="tab-demo">Live Demo</button>
+        <button class="tab-btn" data-tab="models" id="tab-models">Models</button>
+        <button class="tab-btn" data-tab="evaluation" id="tab-evaluation">Evaluation</button>
+        <button class="tab-btn" data-tab="architecture" id="tab-architecture">Architecture</button>
+      </div>
+    </nav>
+
+    <main class="page-main">
+
+      <!-- ========== OVERVIEW TAB ========== -->
+      <section class="tab-panel active" id="panel-overview">
+        <div class="overview-hero">
+          <div class="overview-copy">
+            <h2>Book recommendations driven by real ML models</h2>
+            <p>
+              BookMind combines four recommendation strategies — a popularity baseline,
+              content similarity via TF-IDF, collaborative filtering via SVD,
+              and a weighted hybrid ensemble — into a single demonstrable system
+              backed by a FastAPI backend and a Swagger UI.
+            </p>
+            <p>
+              All recommendations come from the actual trained models.
+              No results are fabricated.
+            </p>
+            <div class="cta-row">
+              <button class="primary-btn" id="goToDemoBtn">Try Live Demo →</button>
+              <a href="http://127.0.0.1:8000/docs" target="_blank" class="outline-btn">Open Swagger UI</a>
+            </div>
+          </div>
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-box">
+              <span>Books</span>
+              <strong id="statBooks">—</strong>
+            </div>
+            <div class="stat-box">
+              <span>Users</span>
+              <strong id="statUsers">—</strong>
+            </div>
+            <div class="stat-box">
+              <span>Ratings</span>
+              <strong id="statRatings">—</strong>
+            </div>
+            <div class="stat-box">
+              <span>Models</span>
+              <strong>4</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="model-cards-row">
+          <div class="model-card">
+            <div class="model-badge popularity-badge">📊</div>
+            <h3>Popularity</h3>
+            <p>Bayesian weighted score combining average rating and rating volume. Best for cold-start and trending books.</p>
+            <div class="model-tag">Input: none</div>
+          </div>
+          <div class="model-card">
+            <div class="model-badge content-badge">🔍</div>
+            <h3>Content-Based</h3>
+            <p>TF-IDF features on metadata + cosine NearestNeighbors. Finds books similar in themes, genres, and text.</p>
+            <div class="model-tag">Input: Book ID</div>
+          </div>
+          <div class="model-card">
+            <div class="model-badge collab-badge">👥</div>
+            <h3>Collaborative</h3>
+            <p>TruncatedSVD on the user-item rating matrix. Learns latent preferences from user interaction patterns.</p>
+            <div class="model-tag">Input: User ID</div>
+          </div>
+          <div class="model-card">
+            <div class="model-badge hybrid-badge">⚗️</div>
+            <h3>Hybrid</h3>
+            <p>Weighted ensemble: 40% Collaborative + 35% Content + 25% Popularity. Shows per-component scores.</p>
+            <div class="model-tag">Input: User ID</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== LIVE DEMO TAB ========== -->
+      <section class="tab-panel" id="panel-demo">
+        <div class="demo-grid">
+
+          <!-- Controls -->
+          <div class="demo-controls panel">
+            <h2 class="panel-title">Recommendation Controls</h2>
+
+            <div class="field-group">
+              <label for="modelSelect">Model</label>
+              <div class="select-wrap">
+                <select id="modelSelect">
+                  <option value="popularity">📊 Popularity</option>
+                  <option value="content">🔍 Content-Based</option>
+                  <option value="collaborative">👥 Collaborative</option>
+                  <option value="hybrid" selected>⚗️ Hybrid</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-group" id="inputGroup">
+              <label id="inputLabel" for="inputValue">User ID</label>
+              <input id="inputValue" type="text" value="1" placeholder="Enter user ID" autocomplete="off" />
+              <p class="field-hint" id="inputHint">Enter the numeric user ID to generate personalized recommendations.</p>
+            </div>
+
+            <div class="field-group">
+              <label for="limitSelect">Result Count</label>
+              <div class="select-wrap">
+                <select id="limitSelect">
+                  <option value="5">5 books</option>
+                  <option value="10" selected>10 books</option>
+                  <option value="20">20 books</option>
+                </select>
+              </div>
+            </div>
+
+            <button id="generateBtn" class="primary-btn full-width" aria-label="Generate recommendations">
+              Generate Recommendations
+            </button>
+
+            <div class="model-explanation" id="modelExplanation">
+              <div class="explanation-icon" id="explanationIcon">⚗️</div>
+              <div>
+                <strong id="explanationTitle">Hybrid Ensemble</strong>
+                <p id="explanationText">Combines popularity, content, and collaborative signals into a blended final ranking. Exposes per-component scores for transparency.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div class="demo-results">
+            <div class="results-header">
+              <h2 class="panel-title" id="resultsTitle">Recommendations</h2>
+              <span class="results-count" id="resultsCount"></span>
+            </div>
+
+            <div id="resultsLoading" class="loading-state hidden">
+              <div class="spinner"></div>
+              <p>Querying BookMind models…</p>
+            </div>
+
+            <div id="resultsError" class="error-state hidden">
+              <div class="error-icon">⚠️</div>
+              <p id="resultsErrorMsg">Unable to load recommendations.</p>
+              <p class="error-sub">Make sure the API is running: <code>python -m uvicorn api.main:app --port 8000</code></p>
+            </div>
+
+            <div id="resultsEmpty" class="empty-state hidden">
+              <p>No recommendations returned for this input.</p>
+            </div>
+
+            <div id="resultsGrid" class="results-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== MODELS TAB ========== -->
+      <section class="tab-panel" id="panel-models">
+        <h2 class="section-heading">Recommendation Models</h2>
+        <p class="section-sub">BookMind implements four distinct recommendation strategies, each with a different data source and algorithm.</p>
+
+        <div class="model-detail-grid">
+
+          <div class="model-detail-card popularity-card">
+            <div class="model-detail-header">
+              <span class="model-icon">📊</span>
+              <div>
+                <h3>Popularity Model</h3>
+                <span class="model-file">src/popularity_model.py</span>
+              </div>
+            </div>
+            <div class="model-detail-body">
+              <div class="detail-section">
+                <h4>How it works</h4>
+                <p>Calculates a Bayesian weighted score per book using the average rating, the global catalog mean rating, and the log of the rating count. Books with both high quality and high volume are ranked highest.</p>
+              </div>
+              <div class="detail-section">
+                <h4>Formula</h4>
+                <code class="formula">score = (v/(v+m)) × R + (m/(v+m)) × C × log(v+1)</code>
+                <p>where R = average rating, C = catalog mean, v = number of ratings, m = minimum threshold</p>
+              </div>
+              <div class="detail-row-grid">
+                <div class="detail-item"><span>Input</span><strong>None (global)</strong></div>
+                <div class="detail-item"><span>Output</span><strong>Sorted ranked list</strong></div>
+                <div class="detail-item"><span>Use case</span><strong>Cold-start</strong></div>
+                <div class="detail-item"><span>Artifact</span><strong>popularity_model.pkl</strong></div>
+              </div>
+              <div class="detail-limitation">
+                <strong>Limitation:</strong> Does not capture individual user preferences. All users receive the same list.
+              </div>
+            </div>
+          </div>
+
+          <div class="model-detail-card content-card">
+            <div class="model-detail-header">
+              <span class="model-icon">🔍</span>
+              <div>
+                <h3>Content-Based Model</h3>
+                <span class="model-file">src/content_model.py</span>
+              </div>
+            </div>
+            <div class="model-detail-body">
+              <div class="detail-section">
+                <h4>How it works</h4>
+                <p>Builds a TF-IDF matrix (up to 50,000 terms, bigrams) from book metadata — title, author, genres, description, language. Uses cosine-distance NearestNeighbors to find similar books. Enforces max 2 books per author for diversity.</p>
+              </div>
+              <div class="detail-section">
+                <h4>Pipeline</h4>
+                <div class="pipeline-steps">
+                  <span>Book Metadata</span><span class="arrow">→</span>
+                  <span>TF-IDF</span><span class="arrow">→</span>
+                  <span>NearestNeighbors</span><span class="arrow">→</span>
+                  <span>Similarity Score</span>
+                </div>
+              </div>
+              <div class="detail-row-grid">
+                <div class="detail-item"><span>Input</span><strong>Book ID</strong></div>
+                <div class="detail-item"><span>Output</span><strong>Similar books + score</strong></div>
+                <div class="detail-item"><span>Use case</span><strong>"More like this"</strong></div>
+                <div class="detail-item"><span>Artifact</span><strong>content_model.pkl</strong></div>
+              </div>
+              <div class="detail-limitation">
+                <strong>Limitation:</strong> Depends on metadata quality. Less personalized than collaborative.
+              </div>
+            </div>
+          </div>
+
+          <div class="model-detail-card collab-card">
+            <div class="model-detail-header">
+              <span class="model-icon">👥</span>
+              <div>
+                <h3>Collaborative Filtering</h3>
+                <span class="model-file">src/collaborative_model.py</span>
+              </div>
+            </div>
+            <div class="model-detail-body">
+              <div class="detail-section">
+                <h4>How it works</h4>
+                <p>Builds a sparse user-item rating matrix and applies TruncatedSVD with 50 latent components. The user vector is dot-producted against all book vectors to produce a preference score. Books already rated are excluded.</p>
+              </div>
+              <div class="detail-section">
+                <h4>Pipeline</h4>
+                <div class="pipeline-steps">
+                  <span>User Ratings</span><span class="arrow">→</span>
+                  <span>Sparse Matrix</span><span class="arrow">→</span>
+                  <span>TruncatedSVD</span><span class="arrow">→</span>
+                  <span>User·Book Score</span>
+                </div>
+              </div>
+              <div class="detail-row-grid">
+                <div class="detail-item"><span>Input</span><strong>User ID</strong></div>
+                <div class="detail-item"><span>Output</span><strong>Ranked books + score</strong></div>
+                <div class="detail-item"><span>Use case</span><strong>Personalized</strong></div>
+                <div class="detail-item"><span>Artifact</span><strong>collaborative_model.pkl</strong></div>
+              </div>
+              <div class="detail-limitation">
+                <strong>Cold-start:</strong> Unknown users receive a popularity-based fallback with a clear label.
+              </div>
+            </div>
+          </div>
+
+          <div class="model-detail-card hybrid-card">
+            <div class="model-detail-header">
+              <span class="model-icon">⚗️</span>
+              <div>
+                <h3>Hybrid Ensemble</h3>
+                <span class="model-file">src/hybrid_model.py</span>
+              </div>
+            </div>
+            <div class="model-detail-body">
+              <div class="detail-section">
+                <h4>How it works</h4>
+                <p>Normalizes collaborative, content, and popularity scores to [0, 1] then combines them with fixed weights. The content score is derived from the user's liked books (rated ≥ 4★) as a profile vector.</p>
+              </div>
+              <div class="detail-section">
+                <h4>Weights</h4>
+                <div class="weight-bars">
+                  <div class="weight-row">
+                    <span>Collaborative</span>
+                    <div class="weight-bar"><div class="weight-fill collab-fill" style="width:40%"></div></div>
+                    <span class="weight-label">40%</span>
+                  </div>
+                  <div class="weight-row">
+                    <span>Content</span>
+                    <div class="weight-bar"><div class="weight-fill content-fill" style="width:35%"></div></div>
+                    <span class="weight-label">35%</span>
+                  </div>
+                  <div class="weight-row">
+                    <span>Popularity</span>
+                    <div class="weight-bar"><div class="weight-fill pop-fill" style="width:25%"></div></div>
+                    <span class="weight-label">25%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="detail-row-grid">
+                <div class="detail-item"><span>Input</span><strong>User ID</strong></div>
+                <div class="detail-item"><span>Output</span><strong>Hybrid + 3 sub-scores</strong></div>
+                <div class="detail-item"><span>Use case</span><strong>Best overall</strong></div>
+                <div class="detail-item"><span>Artifact</span><strong>hybrid_model.pkl</strong></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========== EVALUATION TAB ========== -->
+      <section class="tab-panel" id="panel-evaluation">
+        <h2 class="section-heading">Model Evaluation</h2>
+        <p class="section-sub">
+          Evaluation uses a per-user holdout strategy: the last rated item per user is held out as the test item.
+          Metrics are averaged across 500 users. Results are honest — not inflated.
+        </p>
+
+        <div class="eval-methodology panel">
+          <h3>Methodology</h3>
+          <div class="method-steps">
+            <div class="method-step">
+              <div class="step-num">1</div>
+              <div><strong>Holdout Split</strong><p>Last rated item per user becomes the test item.</p></div>
+            </div>
+            <div class="method-step">
+              <div class="step-num">2</div>
+              <div><strong>Train Inference</strong><p>Models predict on remaining history.</p></div>
+            </div>
+            <div class="method-step">
+              <div class="step-num">3</div>
+              <div><strong>Top-10 Cutoff</strong><p>Top 10 recommendations are evaluated.</p></div>
+            </div>
+            <div class="method-step">
+              <div class="step-num">4</div>
+              <div><strong>Average Metrics</strong><p>Precision, Recall, NDCG, Hit Rate averaged across 500 users.</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="eval-table-wrap panel">
+          <h3>Actual Evaluation Results (K=10)</h3>
+          <div class="eval-note">
+            ℹ️ These are the real metrics from <code>data/processed/evaluation_results.csv</code>. Low scores are expected for a sparse academic dataset and are documented honestly.
+          </div>
+          <div class="table-scroll">
+            <table class="eval-table" id="evalTable">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Precision@10</th>
+                  <th>Recall@10</th>
+                  <th>NDCG@10</th>
+                  <th>Hit Rate@10</th>
+                  <th>Coverage</th>
+                  <th>Users Evaluated</th>
+                </tr>
+              </thead>
+              <tbody id="evalTableBody">
+                <tr><td colspan="7" class="loading-cell">Loading evaluation data…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="metrics-explanation panel">
+          <h3>What these metrics mean</h3>
+          <div class="metric-explain-grid">
+            <div class="metric-explain">
+              <strong>Precision@10</strong>
+              <p>Of the 10 recommended books, how many were actually relevant (rated ≥ 4★ by the user in the holdout)?</p>
+            </div>
+            <div class="metric-explain">
+              <strong>Recall@10</strong>
+              <p>Of all books the user actually liked, how many were captured in the top 10 recommendations?</p>
+            </div>
+            <div class="metric-explain">
+              <strong>NDCG@10</strong>
+              <p>Normalized Discounted Cumulative Gain — accounts for the rank position of hits. Higher rank = more credit.</p>
+            </div>
+            <div class="metric-explain">
+              <strong>Hit Rate@10</strong>
+              <p>What fraction of users had at least one relevant book in their top 10? A coarser but more forgiving metric.</p>
+            </div>
+            <div class="metric-explain">
+              <strong>Coverage</strong>
+              <p>What fraction of the full book catalog appears in recommendations across all evaluated users?</p>
+            </div>
+          </div>
+          <div class="eval-honest-note">
+            <strong>On low scores:</strong> A precision of 0.001 in top-K on a catalog of 10,000 books with extremely sparse holdout data
+            (each user has only one test item) is mathematically expected and is not an error. See <a href="../docs/EVALUATION.md">docs/EVALUATION.md</a> for detailed discussion.
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== ARCHITECTURE TAB ========== -->
+      <section class="tab-panel" id="panel-architecture">
+        <h2 class="section-heading">System Architecture</h2>
+        <p class="section-sub">BookMind is organized as a linear ML pipeline with four independently-trained models feeding into a unified FastAPI backend.</p>
+
+        <div class="arch-diagram panel">
+          <h3>Pipeline Overview</h3>
+          <div class="pipeline-flow">
+            <div class="pipe-stage source-stage">
+              <div class="pipe-icon">🗄️</div>
+              <strong>Dataset</strong>
+              <small>10k books · 53k users · 5.9M ratings</small>
+            </div>
+            <div class="pipe-arrow">↓</div>
+            <div class="pipe-stage process-stage">
+              <div class="pipe-icon">🧹</div>
+              <strong>Data Cleaning</strong>
+              <small>data_cleaning.py · prepare_ratings.py</small>
+            </div>
+            <div class="pipe-arrow">↓</div>
+            <div class="pipe-row">
+              <div class="pipe-stage model-stage pop-stage">
+                <div class="pipe-icon">📊</div>
+                <strong>Popularity</strong>
+                <small>Bayesian score</small>
+              </div>
+              <div class="pipe-stage model-stage content-stage">
+                <div class="pipe-icon">🔍</div>
+                <strong>Content</strong>
+                <small>TF-IDF + cosine</small>
+              </div>
+              <div class="pipe-stage model-stage collab-stage">
+                <div class="pipe-icon">👥</div>
+                <strong>Collaborative</strong>
+                <small>TruncatedSVD</small>
+              </div>
+            </div>
+            <div class="pipe-arrow">↓</div>
+            <div class="pipe-stage hybrid-stage-box">
+              <div class="pipe-icon">⚗️</div>
+              <strong>Hybrid Ensemble</strong>
+              <small>40% + 35% + 25% weighted combination</small>
+            </div>
+            <div class="pipe-arrow">↓</div>
+            <div class="pipe-stage eval-stage-box">
+              <div class="pipe-icon">📈</div>
+              <strong>Evaluation</strong>
+              <small>Precision · Recall · NDCG · Hit Rate</small>
+            </div>
+            <div class="pipe-arrow">↓</div>
+            <div class="pipe-stage api-stage">
+              <div class="pipe-icon">🚀</div>
+              <strong>FastAPI Backend</strong>
+              <small>/recommendations/popular · /content · /collaborative · /hybrid</small>
+            </div>
+            <div class="pipe-arrow">↓</div>
+            <div class="pipe-stage ui-stage">
+              <div class="pipe-icon">🖥️</div>
+              <strong>Demo Interface</strong>
+              <small>This page · Streamlit dashboard · Swagger UI</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-files panel">
+          <h3>Source Files</h3>
+          <div class="file-grid">
+            <div class="file-row"><code>src/data_cleaning.py</code><span>Raw data cleaning and validation</span></div>
+            <div class="file-row"><code>src/prepare_ratings.py</code><span>Ratings normalization</span></div>
+            <div class="file-row"><code>src/popularity_model.py</code><span>Bayesian popularity ranking</span></div>
+            <div class="file-row"><code>src/content_model.py</code><span>TF-IDF + NearestNeighbors</span></div>
+            <div class="file-row"><code>src/collaborative_model.py</code><span>TruncatedSVD collaborative filtering</span></div>
+            <div class="file-row"><code>src/hybrid_model.py</code><span>Weighted ensemble + cold-start</span></div>
+            <div class="file-row"><code>src/evaluation.py</code><span>Offline ranking metrics</span></div>
+            <div class="file-row"><code>src/train_all.py</code><span>Full pipeline orchestrator</span></div>
+            <div class="file-row"><code>api/main.py</code><span>FastAPI REST service</span></div>
+            <div class="file-row"><code>app.py</code><span>Streamlit training dashboard</span></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="page-footer">
+      <div class="footer-inner">
+        <span>BookMind · ML Book Recommendation System · MIT License</span>
+        <span>Built with Python · FastAPI · scikit-learn · pandas</span>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
