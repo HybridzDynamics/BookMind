@@ -372,6 +372,8 @@ def render_report_graphs_panel() -> None:
         ("book_activity_distribution.png", "Ratings Distribution per Book"),
         ("top_popular_books.png", "Top 10 Popular Books by Bayesian Score"),
         ("hybrid_weights.png", "Hybrid Recommendation Component Weights"),
+        ("rating_vs_popularity_scatter.png", "Rating vs Rating Count Scatter (Popularity)"),
+        ("user_book_interaction_matrix.png", "User-Book Interaction Matrix (Top 100×100)"),
         ("model_performance_comparison.png", "Overall Model Performance Comparison"),
         ("precision_10.png", "Precision@10 Metric Comparison"),
         ("recall_10.png", "Recall@10 Metric Comparison"),

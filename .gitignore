@@ -52,12 +52,10 @@ data/raw/data.py
 # Generated / large datasets
 data/processed/
 data/raw/
+!data/processed/self_accounts.json
 
 # Trained model files
 models/*.pkl
 
 # Generated reports
 reports/
-
-# Trained models
-models/

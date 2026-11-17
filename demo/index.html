@@ -33,6 +33,7 @@
       <div class="tab-nav-inner">
         <button class="tab-btn active" data-tab="overview" id="tab-overview">Overview</button>
         <button class="tab-btn" data-tab="demo" id="tab-demo">Live Demo</button>
+        <button class="tab-btn" data-tab="self-account" id="tab-self-account">Self Account</button>
         <button class="tab-btn" data-tab="models" id="tab-models">Models</button>
         <button class="tab-btn" data-tab="evaluation" id="tab-evaluation">Evaluation</button>
         <button class="tab-btn" data-tab="architecture" id="tab-architecture">Architecture</button>
@@ -106,6 +107,12 @@
             <p>Weighted ensemble: 35% Collaborative + 30% Content + 15% Readability + 20% Popularity. Shows per-component scores.</p>
             <div class="model-tag">Input: User ID</div>
           </div>
+          <div class="model-card">
+            <div class="model-badge self-account-badge">👤</div>
+            <h3>Self Account</h3>
+            <p>Create your profile, rate books, get personalized recommendations via SVD fold-in without retraining.</p>
+            <div class="model-tag">Input: Your ratings</div>
+          </div>
         </div>
       </section>
 
@@ -133,6 +140,7 @@
               <label id="inputLabel" for="inputValue">User ID</label>
               <input id="inputValue" type="text" value="1" placeholder="Enter user ID" autocomplete="off" />
               <p class="field-hint" id="inputHint">Enter the numeric user ID to generate personalized recommendations.</p>
+              <div class="example-row" id="exampleRow"></div>
             </div>
 
             <div class="field-group">
@@ -186,7 +194,77 @@
         </div>
       </section>
 
-      
+
+      <section class="tab-panel" id="panel-self-account">
+        <div class="demo-grid">
+
+          <div class="demo-controls panel">
+            <h2 class="panel-title">Account & Ratings</h2>
+
+            <div class="field-group">
+              <label for="accountSelect">Account</label>
+              <div class="select-wrap">
+                <select id="accountSelect">
+                  <option value="">-- Select or create account --</option>
+                </select>
+              </div>
+              <div class="button-row">
+                <button id="createAccountBtn" class="secondary-btn">+ New Account</button>
+                <button id="deleteAccountBtn" class="secondary-btn" style="display:none;">Delete Account</button>
+              </div>
+            </div>
+
+            <div id="createAccountForm" class="hidden">
+              <div class="field-group">
+                <label for="newAccountId">Account ID</label>
+                <input id="newAccountId" type="text" placeholder="e.g. my-profile" />
+              </div>
+              <div class="field-group">
+                <label for="newAccountName">Display Name</label>
+                <input id="newAccountName" type="text" placeholder="e.g. John Doe" />
+              </div>
+              <button id="saveAccountBtn" class="primary-btn full-width">Create Account</button>
+              <button id="cancelAccountBtn" class="secondary-btn full-width">Cancel</button>
+            </div>
+
+            <div id="ratingsSection" class="hidden">
+              <h3>Your Ratings</h3>
+              <div class="field-group">
+                <label for="bookSearch">Search Books</label>
+                <input id="bookSearch" type="text" placeholder="e.g. Harry Potter, Dune, sci-fi..." />
+                <div id="searchResults" class="search-results"></div>
+              </div>
+
+              <div id="ratingsList" class="ratings-list"></div>
+            </div>
+          </div>
+
+          <div class="demo-results">
+            <div class="results-header">
+              <h2 class="panel-title">Recommendations for You</h2>
+              <span class="results-count" id="selfRecCount"></span>
+            </div>
+
+            <div id="selfRecLoading" class="loading-state hidden">
+              <div class="spinner"></div>
+              <p>Generating personalized recommendations...</p>
+            </div>
+
+            <div id="selfRecError" class="error-state hidden">
+              <div class="error-icon">⚠️</div>
+              <p id="selfRecErrorMsg">Unable to load recommendations.</p>
+            </div>
+
+            <div id="selfRecEmpty" class="empty-state hidden">
+              <p>No account selected. Create an account and add some ratings to get personalized recommendations.</p>
+            </div>
+
+            <div id="selfRecGrid" class="results-grid"></div>
+          </div>
+        </div>
+      </section>
+
+
       <section class="tab-panel" id="panel-models">
         <h2 class="section-heading">Recommendation Models</h2>
         <p class="section-sub">BookMind implements four distinct recommendation strategies, each with a different data source and algorithm.</p>
@@ -331,7 +409,7 @@
               </div>
               <div class="detail-row-grid">
                 <div class="detail-item"><span>Input</span><strong>User ID</strong></div>
-                <div class="detail-item"><span>Output</span><strong>Hybrid + 3 sub-scores</strong></div>
+                <div class="detail-item"><span>Output</span><strong>Hybrid + component scores</strong></div>
                 <div class="detail-item"><span>Use case</span><strong>Best overall</strong></div>
                 <div class="detail-item"><span>Artifact</span><strong>hybrid_model.pkl</strong></div>
               </div>
@@ -422,7 +500,7 @@
           </div>
           <div class="eval-honest-note">
             <strong>On low scores:</strong> A precision of 0.001 in top-K on a catalog of 10,000 books with extremely sparse holdout data
-            (each user has only one test item) is mathematically expected and is not an error. See <a href="../docs/EVALUATION.md">docs/EVALUATION.md</a> for detailed discussion.
+            (each user has only one test item) is mathematically expected and is not an error. See the <a href="https://github.com/HybridzDynamics/bookmind/blob/main/docs/EVALUATION.md" target="_blank" rel="noopener">evaluation documentation</a> for detailed discussion.
           </div>
         </div>
       </section>

@@ -150,7 +150,7 @@ def recommend_for_user(
                 "title": str(pop_row["title"]),
                 "author": author_val,
                 "predicted_score": float(pop_row.get("popularity_score", 0.0)),
-                "reason": "Top trending book across BookMind readers (recommended for new reader)",
+                "reason": "Top trending book across BookMind readers (cold-start recommendation for new reader)",
                 "image_url": str(pop_row.get("image_url", ""))
             }
             fallback_list.append(fallback_item)

@@ -38,6 +38,7 @@ BookMind demonstrates how a complete recommender pipeline works, from raw data c
 - Content-based recommendations using TF-IDF + cosine NearestNeighbors
 - Collaborative filtering with TruncatedSVD latent factors
 - Hybrid ensemble with configurable per-component weights
+- Self Account system: create personal profiles, rate books, get personalized recommendations via SVD fold-in
 - FastAPI backend with full Swagger/OpenAPI UI at `/docs`
 - Interactive browser demo (no Node.js required)
 - Streamlit training dashboard with live pipeline logs
@@ -50,6 +51,7 @@ BookMind demonstrates how a complete recommender pipeline works, from raw data c
 | File | Contents |
 |---|---|
 | [docs/DEMO.md](docs/DEMO.md) | Step-by-step demo guide |
+| [docs/SELF_ACCOUNT.md](docs/SELF_ACCOUNT.md) | Self Account feature (SVD fold-in) |
 | [docs/API.md](docs/API.md) | API endpoint reference |
 | [docs/MODELS.md](docs/MODELS.md) | Model explanations |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | Metrics and results |
@@ -117,7 +119,7 @@ Swagger UI is then available at **http://127.0.0.1:8000/docs**.
 
 ### 5. Open the demo
 
-**Browser demo:** with the API running, open `demo/index.html` in a browser.
+**Browser demo:** with the API running, open **http://127.0.0.1:8000/demo/**. On Windows, `start_demo.bat` starts the API and opens that page.
 
 **Streamlit dashboard:**
 
@@ -134,7 +136,7 @@ See [docs/MODELS.md](docs/MODELS.md) for full per-model documentation.
 | Popularity | Bayesian weighted score | Minimum 8 ratings |
 | Content-Based | TF-IDF + NearestNeighbors (cosine) | 50,000 vocabulary, `n_neighbors=50` |
 | Collaborative | TruncatedSVD | 50 latent components |
-| Hybrid | Weighted combination | 40% / 35% / 25% |
+| Hybrid | Weighted combination | 35% / 30% / 15% / 20% |
 
 ## Evaluation
 
@@ -154,7 +156,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for pipeline details.
 pytest
 ```
 
-The suite has 15 tests covering model behavior, API endpoints, data validation, cold-start handling, and recommendation output.
+The suite has 16 tests covering model behavior, API endpoints, data validation, cold-start handling, and recommendation output.
 
 ## Limitations
 

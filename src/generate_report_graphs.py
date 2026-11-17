@@ -162,12 +162,13 @@ def plot_model_evaluation_metrics(
 
     if len(available_ranking_metrics) > 0:
         ranking_max = float(indexed_results[available_ranking_metrics].to_numpy().max())
+        ranking_ymax = max(0.06, ranking_max * 1.15) if ranking_max > 0 else 0.06
         plt.figure(figsize=(10, 6))
         indexed_results[available_ranking_metrics].plot.bar(edgecolor="black", width=0.7)
         plt.title("Recommendation Models Performance Comparison", fontsize=14, fontweight="bold", pad=12)
         plt.xlabel("Recommendation Model", fontsize=12)
         plt.ylabel("Score", fontsize=12)
-        plt.ylim(0.0, max(0.01, ranking_max * 1.15))
+        plt.ylim(0.0, ranking_ymax)
         plt.grid(axis="y", linestyle="--", alpha=0.5)
         plt.legend([metric.upper().replace("@", " @ ") for metric in available_ranking_metrics])
         save_active_plot("model_performance_comparison.png", reports_folder)
@@ -184,28 +185,97 @@ def plot_model_evaluation_metrics(
         plt.figure(figsize=(8, 5))
         plot_color = metric_colors.get(metric_name, "#4A5568")
         metric_max = float(indexed_results[metric_name].max())
+        metric_ymax = max(0.06, metric_max * 1.15) if metric_max > 0 else 0.06
 
         indexed_results[metric_name].plot.bar(color=plot_color, edgecolor="black", width=0.5)
         clean_title = metric_name.upper().replace("@", " @ ")
         plt.title(f"Model Comparison: {clean_title}", fontsize=14, fontweight="bold", pad=12)
         plt.xlabel("Model Architecture", fontsize=12)
         plt.ylabel("Score", fontsize=12)
-        plt.ylim(0.0, max(0.01, metric_max * 1.15))
+        plt.ylim(0.0, metric_ymax)
         plt.grid(axis="y", linestyle="--", alpha=0.5)
 
         safe_filename = metric_name.replace("@", "_") + ".png"
         save_active_plot(safe_filename, reports_folder)
 
 
+def plot_rating_vs_popularity_scatter(
+    popularity_model_path: Path = POPULARITY_MODEL_PATH,
+    reports_folder: Path = REPORTS_DIRECTORY
+) -> None:
+    if not popularity_model_path.exists():
+        return
+
+    pop_df = joblib.load(popularity_model_path)
+    sample_df = pop_df.sample(min(2000, len(pop_df)), random_state=42)
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(
+        sample_df["rating"],
+        sample_df["numRatings"],
+        alpha=0.4,
+        s=sample_df["popularity_score"] / 2,
+        c=sample_df["popularity_score"],
+        cmap="viridis",
+        edgecolors="none"
+    )
+    plt.colorbar(label="Popularity Score")
+    plt.title("Rating vs Rating Count Scatter Plot (Size/Color = Popularity)", fontsize=14, fontweight="bold", pad=12)
+    plt.xlabel("Average Rating (1-5)", fontsize=12)
+    plt.ylabel("Number of Ratings", fontsize=12)
+    plt.grid(alpha=0.3)
+    plt.xscale("linear")
+    plt.yscale("log")
+
+    save_active_plot("rating_vs_popularity_scatter.png", reports_folder)
+
+
+def plot_user_book_interaction_matrix(
+    ratings_path: Path = USER_RATINGS_PATH,
+    reports_folder: Path = REPORTS_DIRECTORY,
+    sample_users: int = 100,
+    sample_books: int = 100
+) -> None:
+    if not ratings_path.exists():
+        return
+
+    ratings_df = pd.read_csv(ratings_path)
+    ratings_df["user_id"] = ratings_df["user_id"].astype(str)
+    ratings_df["book_id"] = ratings_df["book_id"].astype(str)
+
+    top_users = ratings_df["user_id"].value_counts().head(sample_users).index
+    top_books = ratings_df["book_id"].value_counts().head(sample_books).index
+
+    filtered_df = ratings_df[
+        ratings_df["user_id"].isin(top_users) &
+        ratings_df["book_id"].isin(top_books)
+    ]
+
+    pivot_df = filtered_df.pivot(index="user_id", columns="book_id", values="rating").fillna(0)
+
+    plt.figure(figsize=(12, 10))
+    plt.imshow(pivot_df.values, cmap="YlOrRd", aspect="auto", vmin=0, vmax=5)
+    plt.colorbar(label="Rating (1-5 Stars)")
+    plt.title(f"User-Book Interaction Matrix ({sample_users} Users × {sample_books} Books)", fontsize=14, fontweight="bold", pad=12)
+    plt.xlabel("Book ID (Top {} by Ratings)".format(sample_books), fontsize=12)
+    plt.ylabel("User ID (Top {} by Ratings)".format(sample_users), fontsize=12)
+    plt.xticks([])
+    plt.yticks([])
+
+    save_active_plot("user_book_interaction_matrix.png", reports_folder)
+
+
 def generate_all_report_graphs(reports_folder: Path = REPORTS_DIRECTORY) -> None:
     reports_folder.mkdir(parents=True, exist_ok=True)
-    print(f"Generating all 11 report visualization figures into: {reports_folder}")
+    print(f"Generating all 13 report visualization figures into: {reports_folder}")
 
     plot_rating_distribution(reports_folder=reports_folder)
     plot_user_activity_distribution(reports_folder=reports_folder)
     plot_book_activity_distribution(reports_folder=reports_folder)
     plot_top_popular_books(reports_folder=reports_folder)
     plot_hybrid_weights(reports_folder=reports_folder)
+    plot_rating_vs_popularity_scatter(reports_folder=reports_folder)
+    plot_user_book_interaction_matrix(reports_folder=reports_folder)
     plot_model_evaluation_metrics(reports_folder=reports_folder)
 
     print("All report figures successfully generated.")

@@ -1,0 +1,13 @@
+{
+  "model_version": "1.0.0",
+  "trained_at": "2026-11-17T21:08:46",
+  "books_used": 10000,
+  "users_used": 53424,
+  "ratings_used": 5976479,
+  "hybrid_weights": {
+    "collaborative": 0.35,
+    "content": 0.3,
+    "readability": 0.15,
+    "popularity": 0.2
+  }
+}
