@@ -25,7 +25,7 @@ BookMind demonstrates how a complete recommender pipeline works, from raw data c
 | Popularity | — | Rating volume + average | Cold-start / trending books |
 | Content-Based | Book ID | TF-IDF metadata similarity | "More like this" |
 | Collaborative | User ID | SVD latent factors | Personalized recommendations |
-| Hybrid | User ID | 40% Collab + 35% Content + 25% Popularity | Best overall accuracy |
+| Hybrid | User ID | 35% Collaborative + 30% Content + 15% Readability + 20% Popularity | Best overall accuracy |
 
 ## Dataset
 
@@ -134,7 +134,7 @@ See [docs/MODELS.md](docs/MODELS.md) for full per-model documentation.
 | Popularity | Bayesian weighted score | Minimum 8 ratings |
 | Content-Based | TF-IDF + NearestNeighbors (cosine) | 50,000 vocabulary, `n_neighbors=50` |
 | Collaborative | TruncatedSVD | 50 latent components |
-| Hybrid | Weighted combination | 40% + 35% + 25% |
+| Hybrid | Weighted combination | 40% / 35% / 25% |
 
 ## Evaluation
 
@@ -167,4 +167,4 @@ The suite has 15 tests covering model behavior, API endpoints, data validation, 
 
 MIT License. See [LICENSE](LICENSE).
 
-> **Note**: The source dataset has its own attribution files in the `dataset/` directory. See [docs/DATASET.md](docs/DATASET.md).
+> **Note:** The source dataset has its own attribution files in the `dataset/` directory. See [docs/DATASET.md](docs/DATASET.md).
