@@ -1,14 +1,3 @@
-"""
-Tests for Content-Based Recommendation Model.
-
-Tests cover:
-- NearestNeighbors cosine distance recommendations.
-- Target book exclusion.
-- Author diversity constraint (max 2 per author).
-- Unknown book ID error handling.
-
-Note: Strictly functional test implementations using only `def` (no `class`).
-"""
 
 import numpy as np
 import pandas as pd
@@ -18,9 +7,6 @@ from sklearn.neighbors import NearestNeighbors
 
 
 def test_content_model_fit_and_query():
-    """
-    Test TF-IDF fitting and neighbor queries with target exclusion.
-    """
     mock_books = pd.DataFrame({
         "bookId": ["1", "2", "3", "4"],
         "title": ["Space Odyssey", "Solaris Orbit", "Cookbook Recipes", "Baking Pastries"],
@@ -39,20 +25,15 @@ def test_content_model_fit_and_query():
     nn_model = NearestNeighbors(metric="cosine", algorithm="brute", n_neighbors=3)
     nn_model.fit(tfidf_matrix)
 
-    # Query book 1 ("Space Odyssey")
     target_vector = tfidf_matrix[0]
     distances, indices = nn_model.kneighbors(target_vector, n_neighbors=3)
 
     neighbor_indices = indices[0]
-    # Nearest non-self neighbor should be index 1 ("Solaris Orbit")
-    assert neighbor_indices[0] == 0  # self
-    assert neighbor_indices[1] == 1  # closest sci-fi book
+    assert neighbor_indices[0] == 0
+    assert neighbor_indices[1] == 1
 
 
 def test_author_diversity_constraint():
-    """
-    Test that recommendations do not exceed the max books per author limit.
-    """
     candidate_items = [
         {"bookId": "1", "author": "Prolific Author"},
         {"bookId": "2", "author": "Prolific Author"},

@@ -83,14 +83,18 @@ The hybrid model combines multiple recommendation signals to provide the final r
 ### Inputs
 - collaborative score
 - content score
+- readability match score
 - popularity score
 
 ### Processing
 The model normalizes each component to a comparable scale and combines them with the project weights:
 
-- Collaborative: 40%
-- Content: 35%
-- Popularity: 25%
+- Collaborative: 35%
+- Content: 30%
+- Readability match: 15%
+- Popularity: 20%
+
+The readability score compares each book's difficulty estimate (derived from the share of 1-2 star ratings in the catalog) against the user's preferred reading difficulty, computed from the books they rated 4+ stars.
 
 ### Output
 A final hybrid score and final ranked list with component breakdowns.

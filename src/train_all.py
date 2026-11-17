@@ -1,22 +1,3 @@
-"""
-BookMind End-to-End Training Pipeline Orchestrator.
-
-This script runs the entire BookMind preparation, training, evaluation, and reporting pipeline:
-1. data_cleaning.py
-2. prepare_ratings.py
-3. popularity_model.py
-4. content_model.py
-5. collaborative_model.py
-6. hybrid_model.py
-7. evaluation.py
-8. generate_report_graphs.py
-
-It halts immediately if any stage raises an exception, writes timestamped progress logs to
-`data/processed/training.log`, supports real-time logging callbacks for web dashboard panels,
-and saves model metadata to `models/model_metadata.json`.
-
-Note: Strictly functional implementation using only `def` functions (no `class`).
-"""
 
 import sys
 from pathlib import Path
@@ -51,24 +32,6 @@ def append_training_log(
     log_file_path: Path = TRAINING_LOG_PATH,
     log_callback: Optional[Callable[[str], None]] = None
 ) -> str:
-    """
-    Format a timestamped log entry, write it to file, print to stdout,
-    and forward it to an optional UI callback.
-
-    Parameters
-    ----------
-    message_text : str
-        The status or error text to record.
-    log_file_path : Path
-        Target log file path.
-    log_callback : Optional[Callable[[str], None]]
-        Optional streaming callback for live UI dashboards.
-
-    Returns
-    -------
-    str
-        Formatted log message with timestamp.
-    """
     timestamp_string = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     formatted_entry = f"[{timestamp_string}] {message_text}"
 
@@ -96,20 +59,6 @@ def save_model_metadata(
     ratings_file_path: Path = USER_RATINGS_PATH,
     log_callback: Optional[Callable[[str], None]] = None
 ) -> None:
-    """
-    Generate and save JSON metadata describing the trained model bundle.
-
-    Parameters
-    ----------
-    metadata_file_path : Path
-        Destination path for `model_metadata.json`.
-    books_file_path : Path
-        Path to `books_clean.csv`.
-    ratings_file_path : Path
-        Path to `user_ratings.csv`.
-    log_callback : Optional[Callable[[str], None]]
-        Optional UI logging callback.
-    """
     books_count = 0
     if books_file_path.exists():
         books_df = pd.read_csv(books_file_path)
@@ -129,9 +78,10 @@ def save_model_metadata(
         "users_used": int(users_count),
         "ratings_used": int(ratings_count),
         "hybrid_weights": {
-            "collaborative": 0.40,
-            "content": 0.35,
-            "popularity": 0.25
+            "collaborative": 0.35,
+            "content": 0.30,
+            "readability": 0.15,
+            "popularity": 0.20
         }
     }
 
@@ -149,21 +99,6 @@ def execute_single_stage(
     stage_identifier: str,
     log_callback: Optional[Callable[[str], None]] = None
 ) -> bool:
-    """
-    Execute an individual stage of the BookMind training pipeline.
-
-    Parameters
-    ----------
-    stage_identifier : str
-        Stage name (e.g. 'clean', 'ratings', 'popularity', 'content', 'collaborative', 'hybrid', 'eval', 'graphs').
-    log_callback : Optional[Callable[[str], None]]
-        Optional UI callback for streaming progress logs.
-
-    Returns
-    -------
-    bool
-        True if the stage completed successfully, False otherwise.
-    """
     stage_key = stage_identifier.strip().lower()
 
     if stage_key in ["1", "clean", "data_cleaning"]:
@@ -212,7 +147,7 @@ def execute_single_stage(
     elif stage_key in ["8", "graphs", "generate_report_graphs"]:
         append_training_log(">>> Starting Stage 8: Generating Report Visualizations (generate_report_graphs.py)...", log_callback=log_callback)
         generate_all_report_graphs()
-        append_training_log("<<< Stage 8 Complete: 9 report figures generated in reports/.", log_callback=log_callback)
+        append_training_log("<<< Stage 8 Complete: 11 report figures generated in reports/.", log_callback=log_callback)
         return True
 
     else:
@@ -223,19 +158,6 @@ def execute_single_stage(
 def run_full_training_pipeline(
     log_callback: Optional[Callable[[str], None]] = None
 ) -> bool:
-    """
-    Execute all 8 pipeline stages sequentially and stop immediately on failure.
-
-    Parameters
-    ----------
-    log_callback : Optional[Callable[[str], None]]
-        Optional streaming log callback function.
-
-    Returns
-    -------
-    bool
-        True if all stages completed successfully, False otherwise.
-    """
     append_training_log("=" * 65, log_callback=log_callback)
     append_training_log("BookMind Pipeline: Training started", log_callback=log_callback)
     append_training_log("=" * 65, log_callback=log_callback)
@@ -262,7 +184,6 @@ def run_full_training_pipeline(
             append_training_log(f"FATAL ERROR in {stage_label}: {str(error_exception)}", log_callback=log_callback)
             return False
 
-    # Save metadata JSON
     save_model_metadata(log_callback=log_callback)
 
     append_training_log("\n" + "=" * 65, log_callback=log_callback)

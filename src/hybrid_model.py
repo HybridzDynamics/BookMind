@@ -1,16 +1,5 @@
-"""
-BookMind Hybrid Recommendation Model.
-
-This module combines Collaborative Filtering (40%), Content-Based Filtering (35%),
-and Popularity Priors (25%) into an ensemble hybrid recommendation engine.
-All component scores are normalized to [0.0, 1.0]. It enforces author diversity
-(maximum 2 books per author), cold-start fallback to popularity recommendations
-for new users, and outputs explainable recommendation reasons.
-
-Note: Strictly functional implementation using only `def` functions (no `class`).
-"""
-
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 import joblib
@@ -30,25 +19,13 @@ CONTENT_MODEL_PATH = PROJECT_ROOT / "models" / "content_model.pkl"
 COLLABORATIVE_MODEL_PATH = PROJECT_ROOT / "models" / "collaborative_model.pkl"
 HYBRID_MODEL_PATH = PROJECT_ROOT / "models" / "hybrid_model.pkl"
 
-DEFAULT_COLLABORATIVE_WEIGHT = 0.40
-DEFAULT_CONTENT_WEIGHT = 0.35
-DEFAULT_POPULARITY_WEIGHT = 0.25
+DEFAULT_COLLABORATIVE_WEIGHT = 0.35
+DEFAULT_CONTENT_WEIGHT = 0.30
+DEFAULT_READABILITY_WEIGHT = 0.15
+DEFAULT_POPULARITY_WEIGHT = 0.20
 
 
 def normalize_scores_array(scores_input: np.ndarray) -> np.ndarray:
-    """
-    Normalize an array of numerical scores to the range [0.0, 1.0].
-
-    Parameters
-    ----------
-    scores_input : np.ndarray
-        Array of unnormalized raw scores.
-
-    Returns
-    -------
-    np.ndarray
-        Normalized scores array.
-    """
     scores_array = np.asarray(scores_input, dtype=float)
 
     if scores_array.size == 0:
@@ -70,30 +47,6 @@ def train_hybrid_model(
     collaborative_path: Path = COLLABORATIVE_MODEL_PATH,
     model_output_path: Path = HYBRID_MODEL_PATH
 ) -> Dict[str, Any]:
-    """
-    Train and serialize the ensemble hybrid recommendation model.
-
-    Parameters
-    ----------
-    popularity_path : Path
-        Path to `popularity_model.pkl`.
-    content_path : Path
-        Path to `content_model.pkl`.
-    collaborative_path : Path
-        Path to `collaborative_model.pkl`.
-    model_output_path : Path
-        Path where `hybrid_model.pkl` will be stored.
-
-    Returns
-    -------
-    dict
-        The hybrid model bundle.
-
-    Raises
-    ------
-    FileNotFoundError
-        If any of the required prerequisite model files are missing.
-    """
     if not popularity_path.exists():
         error_message = f"Missing popularity model at: {popularity_path}. Run popularity_model.py first."
         raise FileNotFoundError(error_message)
@@ -114,7 +67,6 @@ def train_hybrid_model(
     catalog_books = collaborative_model_bundle["books"].copy()
     catalog_books["bookId"] = catalog_books["bookId"].astype(str)
 
-    # Build popularity score lookup
     popularity_lookup = {}
     for _, row in popularity_dataframe.iterrows():
         book_id_key = str(row["bookId"])
@@ -129,14 +81,25 @@ def train_hybrid_model(
     raw_popularity_array = np.array(raw_popularity_list, dtype=float)
     normalized_popularity_scores = normalize_scores_array(raw_popularity_array)
 
+    if "difficulty" in catalog_books.columns:
+        difficulty_scores_array = (
+            pd.to_numeric(catalog_books["difficulty"], errors="coerce")
+            .fillna(0.5)
+            .to_numpy(dtype=float)
+        )
+    else:
+        difficulty_scores_array = np.full(len(catalog_books), 0.5, dtype=float)
+
     hybrid_artifacts = {
         "books": catalog_books,
         "content_model": content_model_bundle,
         "collaborative_model": collaborative_model_bundle,
         "popularity_scores": normalized_popularity_scores,
+        "difficulty_scores": difficulty_scores_array,
         "weights": {
             "collaborative": DEFAULT_COLLABORATIVE_WEIGHT,
             "content": DEFAULT_CONTENT_WEIGHT,
+            "readability": DEFAULT_READABILITY_WEIGHT,
             "popularity": DEFAULT_POPULARITY_WEIGHT
         }
     }
@@ -145,28 +108,12 @@ def train_hybrid_model(
     joblib.dump(hybrid_artifacts, model_output_path)
     print(f"Hybrid model successfully saved to: {model_output_path}")
 
+    load_hybrid_model.cache_clear()
     return hybrid_artifacts
 
 
+@lru_cache(maxsize=4)
 def load_hybrid_model(model_path: Path = HYBRID_MODEL_PATH) -> Dict[str, Any]:
-    """
-    Load the serialized hybrid recommendation model from disk.
-
-    Parameters
-    ----------
-    model_path : Path
-        Path to `hybrid_model.pkl`.
-
-    Returns
-    -------
-    dict
-        Hybrid model artifacts dictionary.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the model file does not exist.
-    """
     if not model_path.exists():
         error_message = f"Hybrid model not found at: {model_path}. Train it first using train_hybrid_model()."
         raise FileNotFoundError(error_message)
@@ -181,43 +128,16 @@ def recommend_for_user(
     max_books_per_author: int = 2,
     collaborative_weight: float = DEFAULT_COLLABORATIVE_WEIGHT,
     content_weight: float = DEFAULT_CONTENT_WEIGHT,
+    readability_weight: float = DEFAULT_READABILITY_WEIGHT,
     popularity_weight: float = DEFAULT_POPULARITY_WEIGHT,
     model_path: Path = HYBRID_MODEL_PATH
 ) -> List[Dict[str, Any]]:
-    """
-    Generate hybrid book recommendations for a user.
-    Falls back gracefully to popularity recommendations for cold-start / unknown users.
-    Applies author diversity (max 2 books per author).
-
-    Parameters
-    ----------
-    user_id : str
-        Target user identifier.
-    number_of_books : int, default=10
-        Number of recommendations to return.
-    max_books_per_author : int, default=2
-        Maximum allowed books per author in the recommendation list.
-    collaborative_weight : float, default=0.40
-        Weight applied to collaborative filtering scores.
-    content_weight : float, default=0.35
-        Weight applied to user-profile content similarity scores.
-    popularity_weight : float, default=0.25
-        Weight applied to global popularity prior scores.
-    model_path : Path
-        Path to `hybrid_model.pkl`.
-
-    Returns
-    -------
-    list of dict
-        Top hybrid recommendations containing sub-scores and explainable reasons.
-    """
     target_user_id = str(user_id).strip()
     hybrid_bundle = load_hybrid_model(model_path)
 
     collaborative_bundle = hybrid_bundle["collaborative_model"]
     user_to_index = collaborative_bundle["user_to_index"]
 
-    # Cold-start fallback: Unknown user or user without training ratings
     if target_user_id not in user_to_index:
         popular_df = get_popular_books(number_of_books=number_of_books)
         fallback_list = []
@@ -235,6 +155,7 @@ def recommend_for_user(
                 "hybrid_score": float(pop_row.get("popularity_score", 0.0)),
                 "collaborative_score": 0.0,
                 "content_score": 0.0,
+                "readability_score": 0.0,
                 "popularity_score": float(pop_row.get("popularity_score", 0.0)),
                 "reason": "Top trending popular book (cold-start recommendation for new reader)",
                 "matched_author": False,
@@ -246,7 +167,6 @@ def recommend_for_user(
                 break
         return fallback_list
 
-    # 1. Compute Collaborative Filtering Scores
     user_internal_index = user_to_index[target_user_id]
     user_latent_factor = collaborative_bundle["user_factors"][user_internal_index]
     book_latent_factors = collaborative_bundle["book_factors"]
@@ -265,20 +185,30 @@ def recommend_for_user(
 
     normalized_collab_scores = normalize_scores_array(np.array(aligned_collab_list, dtype=float))
 
-    # 2. Compute Content-Based Scores from User's High-Rated Books
-    ratings_dataframe = collaborative_bundle["ratings"]
-    user_ratings_subset = ratings_dataframe[ratings_dataframe["user_id"] == target_user_id]
+    if "user_item_matrix" in collaborative_bundle:
+        user_matrix_row = collaborative_bundle["user_item_matrix"][user_internal_index]
+        rated_column_indices = user_matrix_row.indices
+        rated_column_data = user_matrix_row.data
+        already_rated_book_ids = set()
+        liked_book_ids = set()
+        for col_idx, rating_val in zip(rated_column_indices, rated_column_data):
+            rated_book_id_str = str(collab_book_ids[col_idx])
+            already_rated_book_ids.add(rated_book_id_str)
+            if float(rating_val) >= 4.0:
+                liked_book_ids.add(rated_book_id_str)
+    else:
+        ratings_dataframe = collaborative_bundle["ratings"]
+        user_ratings_subset = ratings_dataframe[ratings_dataframe["user_id"] == target_user_id]
 
-    already_rated_book_ids = set()
-    for book_id_val in user_ratings_subset["book_id"]:
-        already_rated_book_ids.add(str(book_id_val))
+        already_rated_book_ids = set()
+        for book_id_val in user_ratings_subset["book_id"]:
+            already_rated_book_ids.add(str(book_id_val))
 
-    liked_ratings_subset = user_ratings_subset[user_ratings_subset["rating"] >= 4.0]
-    liked_book_ids = set()
-    for book_id_val in liked_ratings_subset["book_id"]:
-        liked_book_ids.add(str(book_id_val))
+        liked_ratings_subset = user_ratings_subset[user_ratings_subset["rating"] >= 4.0]
+        liked_book_ids = set()
+        for book_id_val in liked_ratings_subset["book_id"]:
+            liked_book_ids.add(str(book_id_val))
 
-    # Record authors user liked for match explanation
     user_liked_authors = set()
     for liked_id in liked_book_ids:
         liked_rows = catalog_books[catalog_books["bookId"] == liked_id]
@@ -315,17 +245,55 @@ def recommend_for_user(
 
             normalized_content_scores = normalize_scores_array(np.array(aligned_content_list, dtype=float))
 
-    # 3. Retrieve Pre-computed Normalized Popularity Scores
+    difficulty_lookup = {}
+    if "difficulty" in catalog_books.columns:
+        for book_id_val, diff_val in zip(catalog_books["bookId"], catalog_books["difficulty"]):
+            difficulty_lookup[str(book_id_val)] = float(diff_val)
+
+    liked_difficulty_values = []
+    for liked_id in liked_book_ids:
+        if liked_id in difficulty_lookup:
+            liked_difficulty_values.append(difficulty_lookup[liked_id])
+
+    if len(liked_difficulty_values) > 0:
+        preferred_difficulty = float(np.mean(liked_difficulty_values))
+    else:
+        all_difficulty_values = []
+        for rated_id in already_rated_book_ids:
+            if rated_id in difficulty_lookup:
+                all_difficulty_values.append(difficulty_lookup[rated_id])
+        if len(all_difficulty_values) > 0:
+            preferred_difficulty = float(np.mean(all_difficulty_values))
+        else:
+            preferred_difficulty = 0.5
+
+    difficulty_scores_array = hybrid_bundle.get("difficulty_scores")
+    if difficulty_scores_array is None:
+        if "difficulty" in catalog_books.columns:
+            difficulty_scores_array = (
+                pd.to_numeric(catalog_books["difficulty"], errors="coerce")
+                .fillna(0.5)
+                .to_numpy(dtype=float)
+            )
+        else:
+            difficulty_scores_array = np.full(total_catalog_books, 0.5, dtype=float)
+
+    readability_scores = 1.0 - np.abs(difficulty_scores_array.astype(float) - preferred_difficulty)
+    readability_scores = np.clip(readability_scores, 0.0, 1.0)
+
     normalized_popularity_scores = hybrid_bundle["popularity_scores"]
 
-    # 4. Weighted Linear Combination
+    total_weight = collaborative_weight + content_weight + readability_weight + popularity_weight
+    if total_weight <= 0.0:
+        total_weight = 1.0
+
     combined_hybrid_scores = (
-        (collaborative_weight * normalized_collab_scores)
-        + (content_weight * normalized_content_scores)
-        + (popularity_weight * normalized_popularity_scores)
+        (collaborative_weight / total_weight) * normalized_collab_scores
+        + (content_weight / total_weight) * normalized_content_scores
+        + (readability_weight / total_weight) * readability_scores
+        + (popularity_weight / total_weight) * normalized_popularity_scores
     )
 
-    # Sort indices by hybrid score descending
     sorted_indices = np.argsort(combined_hybrid_scores)
     sorted_indices = sorted_indices[::-1]
 
@@ -336,13 +304,11 @@ def recommend_for_user(
         book_row = catalog_books.iloc[candidate_index]
         book_id_string = str(book_row["bookId"])
 
-        # Exclude books the user already evaluated
         if book_id_string in already_rated_book_ids:
             continue
 
         author_name = str(book_row["author"]).strip()
 
-        # Enforce author diversity
         current_author_count = author_counts_tracker.get(author_name, 0)
         if current_author_count >= max_books_per_author:
             continue
@@ -351,9 +317,9 @@ def recommend_for_user(
         if author_name in user_liked_authors:
             matched_author_flag = True
 
-        # Construct explainable reason
         c_score = float(normalized_collab_scores[candidate_index])
         t_score = float(normalized_content_scores[candidate_index])
+        r_score = float(readability_scores[candidate_index])
 
         if matched_author_flag:
             reason_str = f"Matches your reading interest in books by {author_name}"
@@ -361,6 +327,8 @@ def recommend_for_user(
             reason_str = "Readers with similar book taste rated this book highly"
         elif t_score > 0.5:
             reason_str = "Content and genre strongly match books you rated 4+ stars"
+        elif r_score > 0.8:
+            reason_str = "Reading difficulty closely matches the books you enjoy"
         else:
             reason_str = "Trending highly-rated title aligned with your reading profile"
 
@@ -375,6 +343,7 @@ def recommend_for_user(
             "hybrid_score": round(float(combined_hybrid_scores[candidate_index]), 4),
             "collaborative_score": round(c_score, 4),
             "content_score": round(t_score, 4),
+            "readability_score": round(r_score, 4),
             "popularity_score": round(float(normalized_popularity_scores[candidate_index]), 4),
             "reason": reason_str,
             "matched_author": matched_author_flag,

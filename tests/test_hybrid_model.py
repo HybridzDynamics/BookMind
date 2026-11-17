@@ -1,24 +1,17 @@
-"""
-Tests for Hybrid Recommendation Model.
-
-Tests cover:
-- Score normalization to [0.0, 1.0].
-- Weighted linear combination logic.
-- Author diversity constraints.
-
-Note: Strictly functional test implementations using only `def` (no `class`).
-"""
 
 import numpy as np
 import pytest
 
-from src.hybrid_model import normalize_scores_array
+from src.hybrid_model import (
+    DEFAULT_COLLABORATIVE_WEIGHT,
+    DEFAULT_CONTENT_WEIGHT,
+    DEFAULT_POPULARITY_WEIGHT,
+    DEFAULT_READABILITY_WEIGHT,
+    normalize_scores_array
+)
 
 
 def test_normalize_scores_array_range():
-    """
-    Test that min-max normalization scales values strictly between 0.0 and 1.0.
-    """
     raw_scores = np.array([10.0, 20.0, 50.0, 100.0])
     normalized = normalize_scores_array(raw_scores)
 
@@ -28,23 +21,32 @@ def test_normalize_scores_array_range():
 
 
 def test_normalize_scores_array_identical_values():
-    """
-    Test that an array of identical values normalizes to zeros without divide-by-zero error.
-    """
     identical_scores = np.array([5.0, 5.0, 5.0])
     normalized = normalize_scores_array(identical_scores)
 
     assert float(normalized.sum()) == 0.0
 
 
+def test_hybrid_weights_sum_to_one():
+    total_weight = (
+        DEFAULT_COLLABORATIVE_WEIGHT
+        + DEFAULT_CONTENT_WEIGHT
+        + DEFAULT_READABILITY_WEIGHT
+        + DEFAULT_POPULARITY_WEIGHT
+    )
+    assert round(total_weight, 6) == 1.0
+
+
 def test_hybrid_weighted_combination():
-    """
-    Test the 40/35/25 weighted score combination arithmetic.
-    """
-    collab_score = 1.0
+    collaborative_score = 1.0
     content_score = 0.5
+    readability_score = 0.4
     popularity_score = 0.2
 
-    expected_hybrid = (0.40 * collab_score) + (0.35 * content_score) + (0.25 * popularity_score)
-    # 0.40 + 0.175 + 0.05 = 0.625
-    assert round(expected_hybrid, 3) == 0.625
+    expected_hybrid = (
+        (DEFAULT_COLLABORATIVE_WEIGHT * collaborative_score)
+        + (DEFAULT_CONTENT_WEIGHT * content_score)
+        + (DEFAULT_READABILITY_WEIGHT * readability_score)
+        + (DEFAULT_POPULARITY_WEIGHT * popularity_score)
+    )
+    assert round(expected_hybrid, 3) == 0.600

@@ -19,6 +19,12 @@ Returns service metadata and documentation links.
 ### GET /health
 Returns service health status.
 
+### GET /stats
+Returns dataset statistics and trained model metadata (book/user/rating counts, hybrid weights, training timestamp).
+
+### GET /evaluation
+Returns the offline model evaluation metrics table (Precision@10, Recall@10, NDCG@10, Hit Rate@10, Coverage) read from `data/processed/evaluation_results.csv`.
+
 ### GET /recommendations/popular
 Returns the top popular books.
 

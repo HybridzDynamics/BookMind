@@ -1,13 +1,3 @@
-"""
-Tests for Popularity Recommendation Model.
-
-Tests cover:
-- Bayesian weighted calculation.
-- Ranking ordering (descending score).
-- Popularity score monotonicity with rating count.
-
-Note: Strictly functional test implementations using only `def` (no `class`).
-"""
 
 import numpy as np
 import pandas as pd
@@ -17,9 +7,6 @@ from src.popularity_model import calculate_popularity_scores
 
 
 def test_popularity_scores_calculation():
-    """
-    Test Bayesian score calculation and descending order output.
-    """
     mock_catalog = pd.DataFrame({
         "bookId": ["1", "2", "3"],
         "title": ["Popular Classic", "Obscure Great", "Poor Book"],
@@ -33,7 +20,6 @@ def test_popularity_scores_calculation():
     assert "popularity_score" in scored_dataframe.columns
     assert "weighted_rating" in scored_dataframe.columns
 
-    # Verify descending ordering
     scores = scored_dataframe["popularity_score"].tolist()
     is_sorted_descending = True
     for index in range(len(scores) - 1):
@@ -42,5 +28,4 @@ def test_popularity_scores_calculation():
             break
 
     assert is_sorted_descending is True
-    # The high-rating high-volume book should be ranked first
     assert scored_dataframe.iloc[0]["bookId"] == "1"

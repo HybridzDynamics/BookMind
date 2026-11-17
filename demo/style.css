@@ -1,7 +1,4 @@
-/* ============================================================
-   BookMind Demo — style.css
-   Professional academic ML project presentation.
-   ============================================================ */
+
 
 :root {
   --bg: #f4f6fb;
@@ -49,7 +46,6 @@ code {
   border: 1px solid var(--border);
 }
 
-/* ===== TOPBAR ===== */
 .topbar {
   background: #fff;
   border-bottom: 1px solid var(--border);
@@ -120,7 +116,6 @@ h1 {
 }
 .docs-link:hover { border-color: var(--primary); color: var(--primary); text-decoration: none; }
 
-/* ===== TAB NAV ===== */
 .tab-nav {
   background: #fff;
   border-bottom: 1px solid var(--border);
@@ -149,7 +144,6 @@ h1 {
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-/* ===== MAIN ===== */
 .page-main {
   max-width: 1280px;
   margin: 0 auto;
@@ -159,7 +153,6 @@ h1 {
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* ===== SHARED ===== */
 .panel {
   background: var(--panel-bg);
   border: 1px solid var(--border);
@@ -193,7 +186,6 @@ h1 {
   margin-bottom: 6px;
 }
 
-/* ===== BUTTONS ===== */
 .primary-btn {
   display: inline-flex;
   align-items: center;
@@ -227,7 +219,6 @@ h1 {
 }
 .outline-btn:hover { border-color: var(--primary); color: var(--primary); text-decoration: none; }
 
-/* ===== OVERVIEW ===== */
 .overview-hero {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
@@ -302,7 +293,6 @@ h1 {
   border: 1px solid var(--border);
 }
 
-/* ===== DEMO ===== */
 .demo-grid {
   display: grid;
   grid-template-columns: 340px 1fr;
@@ -367,7 +357,6 @@ select:focus, input[type="text"]:focus {
 .results-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
 .results-count { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
 
-/* Loading */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -410,14 +399,12 @@ select:focus, input[type="text"]:focus {
 }
 .hidden { display: none !important; }
 
-/* Results grid */
 .results-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
 }
 
-/* Book cards */
 .book-card {
   background: var(--panel-bg);
   border: 1px solid var(--border);
@@ -457,6 +444,7 @@ select:focus, input[type="text"]:focus {
 .score-hybrid { background: rgba(124,58,237,0.1); color: #6d28d9; }
 .score-collab { background: rgba(15,155,142,0.1); color: #0f766e; }
 .score-content { background: rgba(35,70,212,0.1); color: var(--primary-dark); }
+.score-readability { background: #E9D8FD; color: #6B46C1; }
 .score-pop { background: rgba(217,119,6,0.12); color: #b45309; }
 .score-similarity { background: rgba(35,70,212,0.1); color: var(--primary-dark); }
 .score-rating { background: rgba(217,119,6,0.12); color: #b45309; }
@@ -481,7 +469,6 @@ select:focus, input[type="text"]:focus {
   margin-bottom: 10px;
 }
 
-/* ===== MODELS TAB ===== */
 .model-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -548,10 +535,10 @@ select:focus, input[type="text"]:focus {
 .weight-fill { height: 100%; border-radius: 999px; }
 .collab-fill { background: var(--accent-teal); }
 .content-fill { background: var(--primary); }
+.readability-fill { background: #805AD5; }
 .pop-fill { background: var(--accent-amber); }
 .weight-label { width: 36px; text-align: right; font-weight: 700; font-size: 0.82rem; }
 
-/* ===== EVALUATION ===== */
 .eval-methodology { margin-bottom: 22px; }
 .eval-methodology h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
 .method-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -620,7 +607,6 @@ select:focus, input[type="text"]:focus {
 }
 .eval-honest-note a { color: var(--primary); }
 
-/* ===== ARCHITECTURE ===== */
 .arch-diagram { margin-bottom: 24px; }
 .arch-diagram h3 { font-size: 1rem; font-weight: 700; margin-bottom: 22px; }
 .pipeline-flow {
@@ -675,7 +661,6 @@ select:focus, input[type="text"]:focus {
 .file-row code { border: none; background: none; padding: 0; flex-shrink: 0; color: var(--primary-dark); font-weight: 600; }
 .file-row span { color: var(--text-muted); }
 
-/* ===== FOOTER ===== */
 .page-footer {
   background: #fff;
   border-top: 1px solid var(--border);
@@ -693,7 +678,6 @@ select:focus, input[type="text"]:focus {
   color: var(--text-muted);
 }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 1024px) {
   .model-cards-row { grid-template-columns: repeat(2, 1fr); }
   .model-detail-grid { grid-template-columns: 1fr; }

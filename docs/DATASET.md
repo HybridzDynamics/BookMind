@@ -2,15 +2,14 @@
 
 ## Source
 
-BookMind uses the Goodreads-style Goodbooks-10k dataset, which is a well-known public recommendation dataset for academic and prototype recommender systems. The project keeps the original dataset metadata and attribution files in the [../dataset](../dataset) directory, while the processed and project-specific cleaned versions live under [../data](../data).
+BookMind uses the Goodreads-style Goodbooks-10k dataset, which is a well-known public recommendation dataset for academic and prototype recommender systems. The project keeps the raw source files in the [../data/raw](../data/raw) directory, while the processed and project-specific cleaned versions live under [../data](../data).
 
 ## Important files
 
-- [../dataset/books.csv](../dataset/books.csv): original catalog metadata
-- [../dataset/ratings.csv](../dataset/ratings.csv): raw user-item interactions
-- [../dataset/book_tags.csv](../dataset/book_tags.csv): tag assignments per book
-- [../dataset/tags.csv](../dataset/tags.csv): tag name lookup table
-- [../data/raw/books.csv](../data/raw/books.csv): project input copy used by processing
+- [../data/raw/books.csv](../data/raw/books.csv): raw catalog metadata
+- [../data/raw/ratings.csv](../data/raw/ratings.csv): raw user-item interactions
+- [../data/raw/book_tags.csv](../data/raw/book_tags.csv): tag assignments per book
+- [../data/raw/tags.csv](../data/raw/tags.csv): tag name lookup table
 - [../data/processed/books_clean.csv](../data/processed/books_clean.csv): cleaned catalog used by models
 - [../data/processed/user_ratings.csv](../data/processed/user_ratings.csv): filtered and deduplicated ratings
 - [../data/processed/evaluation_results.csv](../data/processed/evaluation_results.csv): offline evaluation metrics
@@ -43,7 +42,7 @@ The project performs the following cleaning steps before model training:
 
 ## Licensing and attribution
 
-The dataset source is distributed under the dataset license included in [../dataset/LICENSE](../dataset/LICENSE), which is a Creative Commons Attribution-ShareAlike 4.0 license. The project itself is distributed under the MIT license in [../LICENSE](../LICENSE).
+The Goodbooks-10k dataset is a public Goodreads-style benchmark commonly used for academic recommender projects. The project itself is distributed under the MIT license in [../LICENSE](../LICENSE).
 
 ## Limitations
 

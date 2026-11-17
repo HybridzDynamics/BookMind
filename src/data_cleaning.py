@@ -1,15 +1,3 @@
-"""
-BookMind Data Cleaning Module.
-
-This module processes raw Goodbooks-10k datasets:
-- `data/raw/books.csv`: Core catalog metadata (title, authors, ratings, counts).
-- `data/raw/book_tags.csv` & `data/raw/tags.csv`: Rich genre and topical tags.
-
-It normalizes text, extracts and attaches top genres per book, creates composite
-NLP content strings, and writes the clean dataset to `data/processed/books_clean.csv`.
-
-Note: Strictly functional implementation using only `def` functions (no `class`).
-"""
 
 from pathlib import Path
 import csv
@@ -25,19 +13,6 @@ CLEAN_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "books_clean.csv"
 
 
 def clean_text_field(value: object) -> str:
-    """
-    Clean and normalize a text string by removing extraneous whitespace.
-
-    Parameters
-    ----------
-    value : object
-        Input value to normalize.
-
-    Returns
-    -------
-    str
-        Cleaned text string, or empty string if input is missing.
-    """
     if pd.isna(value):
         return ""
     else:
@@ -51,23 +26,6 @@ def extract_genres_from_tags(
     tags_file: Path = RAW_TAGS_PATH,
     max_genres_per_book: int = 5
 ) -> Dict[str, str]:
-    """
-    Extract meaningful book genres by cross-referencing book_tags and tags files.
-
-    Parameters
-    ----------
-    book_tags_file : Path
-        Path to `book_tags.csv`.
-    tags_file : Path
-        Path to `tags.csv`.
-    max_genres_per_book : int, default=5
-        Maximum number of genre tags to retain per book.
-
-    Returns
-    -------
-    dict
-        Mapping from goodreads_book_id (string) to comma-separated genres string.
-    """
     if not book_tags_file.exists():
         print(f"Notice: {book_tags_file} not found; skipping genre tag extraction.")
         return {}
@@ -78,7 +36,6 @@ def extract_genres_from_tags(
 
     print(f"Extracting genre tags from {tags_file} and {book_tags_file}...")
 
-    # Excluded noise tags (shelf markers, format indicators, personal book list labels)
     excluded_keywords = [
         "to-read", "favorites", "currently-reading", "owned", "default",
         "books-i-own", "read-in-", "wish-list", "shelfari", "audiobook",
@@ -106,7 +63,6 @@ def extract_genres_from_tags(
                     break
 
         if not is_disqualified:
-            # Clean hyphens in genre names for cleaner text representation
             genre_name_clean = raw_tag_name.replace("-", " ")
             valid_tag_lookup[tag_id_num] = genre_name_clean
 
@@ -114,7 +70,6 @@ def extract_genres_from_tags(
     book_tags_df["goodreads_book_id"] = book_tags_df["goodreads_book_id"].astype(str)
     book_tags_df["tag_id"] = pd.to_numeric(book_tags_df["tag_id"], errors="coerce").fillna(-1).astype(int)
 
-    # Filter to meaningful tags only
     valid_tag_id_set = set(valid_tag_lookup.keys())
     matching_tags_mask = book_tags_df["tag_id"].isin(valid_tag_id_set)
     filtered_book_tags = book_tags_df[matching_tags_mask]
@@ -154,29 +109,6 @@ def clean_books_data(
     raw_path: Path = RAW_BOOKS_PATH,
     output_path: Path = CLEAN_BOOKS_PATH
 ) -> pd.DataFrame:
-    """
-    Clean the Goodbooks-10k books dataset, extract genres from tag files if available,
-    and save the processed result.
-
-    Parameters
-    ----------
-    raw_path : Path
-        Path to raw `books.csv`.
-    output_path : Path
-        Path where `books_clean.csv` will be written.
-
-    Returns
-    -------
-    pd.DataFrame
-        Cleaned books DataFrame.
-
-    Raises
-    ------
-    FileNotFoundError
-        If `books.csv` is missing from `raw_path`.
-    ValueError
-        If required columns are absent in `books.csv`.
-    """
     if not raw_path.exists():
         error_message = f"Raw books file not found at: {raw_path}. Place Goodbooks-10k books.csv there."
         raise FileNotFoundError(error_message)
@@ -184,7 +116,6 @@ def clean_books_data(
     print(f"Loading raw books catalog from: {raw_path}")
     raw_dataframe = pd.read_csv(raw_path)
 
-    # Strip column name whitespace
     clean_columns = []
     for column_name in raw_dataframe.columns:
         stripped_name = str(column_name).strip()
@@ -221,7 +152,6 @@ def clean_books_data(
     numeric_count = pd.to_numeric(raw_dataframe["ratings_count"], errors="coerce")
     cleaned_dataframe["numRatings"] = numeric_count.fillna(0).astype(int)
 
-    # Extract genres from tags if tags files exist
     extracted_genres_map = extract_genres_from_tags()
 
     if len(extracted_genres_map) > 0 and "goodreads_book_id" in raw_dataframe.columns:
@@ -250,7 +180,42 @@ def clean_books_data(
     else:
         cleaned_dataframe["image_url"] = ""
 
-    # Build composite content string used by content-based TF-IDF models
+    star_columns = ["ratings_1", "ratings_2", "ratings_3", "ratings_4", "ratings_5"]
+    star_totals = None
+    low_counts = None
+    for star_column in star_columns:
+        if star_column in raw_dataframe.columns:
+            star_numeric = pd.to_numeric(raw_dataframe[star_column], errors="coerce").fillna(0.0)
+            if star_totals is None:
+                star_totals = star_numeric.copy()
+            else:
+                star_totals = star_totals + star_numeric
+            if star_column in ("ratings_1", "ratings_2"):
+                if low_counts is None:
+                    low_counts = star_numeric.copy()
+                else:
+                    low_counts = low_counts + star_numeric
+
+    if star_totals is None or low_counts is None:
+        cleaned_dataframe["difficulty"] = 0.5
+    else:
+        has_ratings_mask = star_totals > 0
+        raw_difficulty = pd.Series(0.5, index=raw_dataframe.index, dtype=float)
+        raw_difficulty.loc[has_ratings_mask] = (
+            low_counts.loc[has_ratings_mask] / star_totals.loc[has_ratings_mask]
+        )
+        valid_difficulty = raw_difficulty[has_ratings_mask]
+        if len(valid_difficulty) > 0:
+            diff_min = float(valid_difficulty.min())
+            diff_max = float(valid_difficulty.max())
+            if diff_max > diff_min:
+                normalized_difficulty = (raw_difficulty - diff_min) / (diff_max - diff_min)
+            else:
+                normalized_difficulty = pd.Series(0.5, index=raw_dataframe.index, dtype=float)
+        else:
+            normalized_difficulty = pd.Series(0.5, index=raw_dataframe.index, dtype=float)
+        cleaned_dataframe["difficulty"] = normalized_difficulty.round(4).astype(float)
+
     combined_content_series = (
         cleaned_dataframe["title"]
         + " "
@@ -264,12 +229,10 @@ def clean_books_data(
     )
     cleaned_dataframe["content"] = combined_content_series.str.strip()
 
-    # Deduplicate and filter out books with empty titles
     cleaned_dataframe = cleaned_dataframe.drop_duplicates(subset=["bookId"])
     title_length_mask = cleaned_dataframe["title"].str.len() > 0
     cleaned_dataframe = cleaned_dataframe[title_length_mask].reset_index(drop=True)
 
-    # Save to processed directory
     output_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_dataframe.to_csv(
         output_path,

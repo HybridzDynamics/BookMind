@@ -1,18 +1,3 @@
-"""
-BookMind Interactive Streamlit Dashboard.
-
-This application provides a comprehensive UI across six specialized panels:
-1. Dashboard: Key statistics, dataset summary, trained model count, and top popular books.
-2. Book Search: Multilingual keyword, author, and genre search with content-based recommendations.
-3. User Recommendations: Personalized recommendations using SVD Collaborative or Hybrid models,
-   including sub-scores and explainable reasons.
-4. Virtual User Simulation: Interactive real-time simulation tracking user browsing sessions,
-   with a live progress bar, metrics, activity table, live chart, and CSV export.
-5. Report Graphs: High-resolution visual gallery displaying all 9 generated analytical charts.
-6. Model Training & Logs: Interactive pipeline trigger with real-time log streaming and historical log viewer.
-
-Note: Strictly functional implementation using only `def` functions (no `class`).
-"""
 
 from datetime import datetime
 from pathlib import Path
@@ -47,19 +32,6 @@ st.set_page_config(
 
 @st.cache_data
 def load_csv_data(file_path: Path) -> pd.DataFrame:
-    """
-    Load a CSV file into a pandas DataFrame safely.
-
-    Parameters
-    ----------
-    file_path : Path
-        Path to CSV file.
-
-    Returns
-    -------
-    pd.DataFrame
-        Loaded DataFrame or empty DataFrame if not found.
-    """
     if file_path.exists():
         loaded_df = pd.read_csv(file_path)
         return loaded_df
@@ -68,14 +40,6 @@ def load_csv_data(file_path: Path) -> pd.DataFrame:
 
 
 def count_trained_models() -> int:
-    """
-    Count the number of trained model artifact files currently on disk.
-
-    Returns
-    -------
-    int
-        Count of available model files.
-    """
     model_paths = [
         POPULARITY_MODEL_PATH,
         CONTENT_MODEL_PATH,
@@ -90,9 +54,6 @@ def count_trained_models() -> int:
 
 
 def render_dashboard_panel(books_df: pd.DataFrame, ratings_df: pd.DataFrame) -> None:
-    """
-    Render Dashboard panel with catalog metrics, trained models count, and popular books.
-    """
     st.header("📊 System Overview & Metrics")
 
     total_books = len(books_df)
@@ -146,7 +107,7 @@ def render_dashboard_panel(books_df: pd.DataFrame, ratings_df: pd.DataFrame) -> 
                     f"{total_ratings:,}",
                     f"{books_df['author'].nunique():,}",
                     "50 latent components",
-                    "Collaborative (40%) + Content (35%) + Popularity (25%)"
+                    "Collaborative (35%) + Content (30%) + Readability (15%) + Popularity (20%)"
                 ]
             }
             st.table(pd.DataFrame(summary_info))
@@ -155,9 +116,6 @@ def render_dashboard_panel(books_df: pd.DataFrame, ratings_df: pd.DataFrame) -> 
 
 
 def render_book_search_panel(books_df: pd.DataFrame) -> None:
-    """
-    Render Book Search and Content-Based Recommendation panel.
-    """
     st.header("🔍 Book Search & Content Discovery")
 
     if books_df.empty:
@@ -219,9 +177,6 @@ def render_book_search_panel(books_df: pd.DataFrame) -> None:
 
 
 def render_user_recommendations_panel(ratings_df: pd.DataFrame) -> None:
-    """
-    Render Personalized User Recommendations panel.
-    """
     st.header("👤 Personalized User Recommendations")
 
     if ratings_df.empty:
@@ -239,7 +194,7 @@ def render_user_recommendations_panel(ratings_df: pd.DataFrame) -> None:
     with col_m:
         model_choice = st.selectbox(
             "Recommendation Engine:",
-            ["Hybrid Ensemble (40% Collab + 35% Content + 25% Popularity)", "Collaborative Filtering (SVD)"]
+            ["Hybrid Ensemble (35% Collab + 30% Content + 15% Readability + 20% Popularity)", "Collaborative Filtering (SVD)"]
         )
 
     with col_n:
@@ -262,7 +217,7 @@ def render_user_recommendations_panel(ratings_df: pd.DataFrame) -> None:
 
                     preferred_cols = [
                         "bookId", "title", "author", "hybrid_score",
-                        "collaborative_score", "content_score", "popularity_score", "reason"
+                        "collaborative_score", "content_score", "readability_score", "popularity_score", "reason"
                     ]
                     available_preferred = []
                     for col in preferred_cols:
@@ -288,9 +243,6 @@ def render_user_recommendations_panel(ratings_df: pd.DataFrame) -> None:
 
 
 def render_virtual_simulation_panel(books_df: pd.DataFrame, ratings_df: pd.DataFrame) -> None:
-    """
-    Render Virtual User Simulation panel with live progress, real-time counters, charts, and CSV download.
-    """
     st.header("🤖 Virtual User Activity Simulation")
     st.caption("Simulates real-world browsing sessions without modifying ground-truth ratings.")
 
@@ -384,7 +336,6 @@ def render_virtual_simulation_panel(books_df: pd.DataFrame, ratings_df: pd.DataF
         SIMULATION_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         sim_df.to_csv(SIMULATION_LOG_PATH, index=False)
 
-        # Display Live Metric Counters
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Active Virtual Users", f"{sample_count}")
         m2.metric("Total Searches", f"{action_counter}")
@@ -395,7 +346,6 @@ def render_virtual_simulation_panel(books_df: pd.DataFrame, ratings_df: pd.DataF
         st.subheader("Live Activity Log")
         st.dataframe(sim_df, use_container_width=True, hide_index=True)
 
-        # CSV Download Button
         csv_bytes = sim_df.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Download Simulation Activity CSV",
@@ -406,9 +356,6 @@ def render_virtual_simulation_panel(books_df: pd.DataFrame, ratings_df: pd.DataF
 
 
 def render_report_graphs_panel() -> None:
-    """
-    Render Report Graphs gallery displaying all 9 generated charts.
-    """
     st.header("📈 Report Visualizations & Model Evaluation")
 
     if EVALUATION_PATH.exists():
@@ -428,7 +375,9 @@ def render_report_graphs_panel() -> None:
         ("model_performance_comparison.png", "Overall Model Performance Comparison"),
         ("precision_10.png", "Precision@10 Metric Comparison"),
         ("recall_10.png", "Recall@10 Metric Comparison"),
-        ("ndcg_10.png", "NDCG@10 Metric Comparison")
+        ("ndcg_10.png", "NDCG@10 Metric Comparison"),
+        ("hit_rate_10.png", "Hit Rate@10 Metric Comparison"),
+        ("coverage.png", "Catalog Coverage Comparison")
     ]
 
     for index in range(0, len(report_figures), 2):
@@ -453,10 +402,6 @@ def render_report_graphs_panel() -> None:
 
 
 def render_training_logs_panel() -> None:
-    """
-    Render the Model Training & Live Logging Panel.
-    Enables users to trigger training tasks and watch live execution logs.
-    """
     st.header("⚙️ Model Training & Live Execution Logs")
     st.caption("Trigger data processing, train recommendation models, and monitor real-time execution logs.")
 
@@ -528,7 +473,6 @@ def render_training_logs_panel() -> None:
                 progress_bar.progress(1.0)
                 status_banner.success("✅ Full pipeline completed successfully! All models and reports are ready.")
         else:
-            # Single stage execution
             stage_number = training_target.split(":")[0].replace("Stage", "").strip()
             status_banner.info(f"Executing {training_target}...")
             single_success = execute_single_stage(stage_number, log_callback=handle_live_log)
@@ -564,9 +508,6 @@ def render_training_logs_panel() -> None:
 
 
 def main() -> None:
-    """
-    Main Streamlit application entrypoint.
-    """
     books_df = load_csv_data(CLEAN_BOOKS_PATH)
     ratings_df = load_csv_data(USER_RATINGS_PATH)
 

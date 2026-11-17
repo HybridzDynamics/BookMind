@@ -23,8 +23,7 @@ Demo Interface
 ## Components
 
 ### Data layer
-- [../dataset](../dataset): original source dataset
-- [../data/raw](../data/raw): project input files
+- [../data/raw](../data/raw): raw source dataset files
 - [../data/processed](../data/processed): cleaned and prepared datasets
 
 ### Model layer

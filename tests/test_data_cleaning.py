@@ -1,14 +1,3 @@
-"""
-Tests for Data Cleaning Module.
-
-Tests cover:
-- Text normalization function.
-- Validation of required columns.
-- Handling of missing values.
-- Duplicate removal.
-
-Note: Strictly functional test implementations using only `def` (no `class`).
-"""
 
 import pandas as pd
 import pytest
@@ -17,18 +6,12 @@ from src.data_cleaning import clean_text_field
 
 
 def test_clean_text_field_normalizes_whitespace():
-    """
-    Test that clean_text_field strips leading, trailing, and repeated whitespace.
-    """
     dirty_text = "   The   Great    Gatsby   "
     cleaned_result = clean_text_field(dirty_text)
     assert cleaned_result == "The Great Gatsby"
 
 
 def test_clean_text_field_handles_null_values():
-    """
-    Test that clean_text_field safely converts NaN/None to an empty string.
-    """
     none_result = clean_text_field(None)
     assert none_result == ""
 
@@ -37,9 +20,6 @@ def test_clean_text_field_handles_null_values():
 
 
 def test_missing_column_detection():
-    """
-    Test that data cleaning identifies missing required columns properly.
-    """
     sample_dataframe = pd.DataFrame({
         "book_id": ["1", "2"],
         "title": ["Book 1", "Book 2"]
@@ -58,9 +38,6 @@ def test_missing_column_detection():
 
 
 def test_duplicate_book_id_removal():
-    """
-    Test that duplicate book identifiers are removed.
-    """
     duplicate_dataframe = pd.DataFrame({
         "bookId": ["1", "1", "2"],
         "title": ["First Book", "First Book Copy", "Second Book"]

@@ -13,7 +13,7 @@ BookMind demonstrates how a complete recommender pipeline works — from raw dat
 | Popularity | — | Rating volume + average | Cold-start / trending books |
 | Content-Based | Book ID | TF-IDF metadata similarity | "More like this" |
 | Collaborative | User ID | SVD latent factors | Personalized recommendations |
-| Hybrid | User ID | 40% Collab + 35% Content + 25% Popularity | Best overall accuracy |
+| Hybrid | User ID | 35% Collaborative + 30% Content + 15% Readability + 20% Popularity | Best overall accuracy |
 
 ## Dataset
 
@@ -43,7 +43,6 @@ BookMind demonstrates how a complete recommender pipeline works — from raw dat
 | [docs/EVALUATION.md](docs/EVALUATION.md) | Metrics and results |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
 | [docs/DATASET.md](docs/DATASET.md) | Dataset details and attribution |
-| [docs/VIVA.md](docs/VIVA.md) | Viva presentation guide |
 
 ## Project structure
 
@@ -51,7 +50,6 @@ BookMind demonstrates how a complete recommender pipeline works — from raw dat
 bookmind/
 ├── api/          FastAPI backend
 ├── data/         Processed datasets
-├── dataset/      Raw source dataset
 ├── demo/         Static HTML/CSS/JS demo interface
 ├── docs/         All project documentation
 ├── models/       Trained model pickle files
@@ -122,7 +120,7 @@ See [docs/MODELS.md](docs/MODELS.md) for full per-model documentation.
 | Popularity | Bayesian weighted score | min 8 ratings threshold |
 | Content-Based | TF-IDF + NearestNeighbors (cosine) | 50,000 vocab, n_neighbors=50 |
 | Collaborative | TruncatedSVD | 50 latent components |
-| Hybrid | Weighted combination | 40% + 35% + 25% |
+| Hybrid | Weighted combination | 35% + 30% + 15% + 20% |
 
 ## Evaluation
 
@@ -155,4 +153,4 @@ pytest
 
 MIT License. See [LICENSE](LICENSE).
 
-> **Note**: The source dataset has its own attribution files in the `dataset/` directory. See [docs/DATASET.md](docs/DATASET.md).
+> **Note**: The source dataset is the Goodbooks-10k Goodreads-style public dataset. See [docs/DATASET.md](docs/DATASET.md) for attribution details.

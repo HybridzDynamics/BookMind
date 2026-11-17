@@ -1,12 +1,3 @@
-"""
-BookMind Virtual User Activity Simulation Module.
-
-This module simulates realistic user sessions (e.g. searching catalog keywords,
-retrieving recommendations via content, collaborative, or hybrid engines)
-without modifying or injecting artificial ratings into the clean ground-truth dataset.
-Activity logs are persisted to `data/processed/virtual_user_activity.csv`
-for observability and behavioral analytics.
-"""
 
 import sys
 from datetime import datetime
@@ -32,32 +23,6 @@ def run_virtual_simulation(
     random_seed: int = 42,
     output_log_path: Path = SIMULATION_LOG_PATH
 ) -> pd.DataFrame:
-    """
-    Simulate user queries and recommendation requests and log results.
-
-    Parameters
-    ----------
-    number_of_users : int, default=5
-        Number of virtual user sessions to simulate.
-    searches_per_user : int, default=3
-        Number of catalog interactions performed by each simulated user.
-    model_name : str, default='hybrid'
-        Recommendation algorithm to use ('hybrid', 'collaborative', or 'content').
-    random_seed : int, default=42
-        Seed for deterministic random behavior.
-    output_log_path : Path
-        Path where session logs are saved as CSV.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame of logged user simulation interactions.
-
-    Raises
-    ------
-    FileNotFoundError
-        If processed books or ratings files are not present.
-    """
     if not CLEAN_BOOKS_PATH.exists():
         error_message = f"Cleaned books file missing at: {CLEAN_BOOKS_PATH}. Run data_cleaning.py first."
         raise FileNotFoundError(error_message)

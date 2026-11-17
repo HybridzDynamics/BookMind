@@ -1,14 +1,9 @@
-/**
- * BookMind Demo — script.js
- * Handles tab navigation, API health check, stat loading,
- * recommendation fetching, result rendering, and evaluation display.
- */
+
 
 'use strict';
 
 const BASE_URL = 'http://127.0.0.1:8000';
 
-// ===== Model Metadata =====
 const MODEL_META = {
   popularity: {
     label: 'Popularity',
@@ -39,12 +34,11 @@ const MODEL_META = {
     icon: '⚗️',
     inputMode: 'user',
     inputLabel: 'User ID',
-    hint: 'Enter a numeric user ID (e.g. 1, 42, 100). Results show per-component scores: Collaborative, Content, and Popularity.',
-    explanation: 'Combines all three signals: 40% Collaborative + 35% Content + 25% Popularity. Shows individual sub-scores for transparency.'
+    hint: 'Enter a numeric user ID (e.g. 1, 42, 100). Results show per-component scores: Collaborative, Content, Readability, and Popularity.',
+    explanation: 'Combines four signals: 35% Collaborative + 30% Content + 15% Readability + 20% Popularity. Shows individual sub-scores for transparency.'
   }
 };
 
-// ===== Tab Navigation =====
 function initTabs() {
   const buttons = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.tab-panel');
@@ -63,7 +57,6 @@ function initTabs() {
     });
   });
 
-  // Go to Demo button in overview
   const goToDemoBtn = document.getElementById('goToDemoBtn');
   if (goToDemoBtn) {
     goToDemoBtn.addEventListener('click', () => {
@@ -72,7 +65,6 @@ function initTabs() {
   }
 }
 
-// ===== API Health =====
 async function checkApiHealth() {
   const pill = document.getElementById('apiStatus');
   try {
@@ -91,7 +83,6 @@ async function checkApiHealth() {
   }
 }
 
-// ===== Dataset Stats =====
 async function loadStats() {
   try {
     const res = await fetch(`${BASE_URL}/stats`, { signal: AbortSignal.timeout(4000) });
@@ -101,7 +92,7 @@ async function loadStats() {
     if (data.users) setStatEl('statUsers', formatNumber(data.users));
     if (data.ratings) setStatEl('statRatings', formatNumber(data.ratings));
   } catch {
-    // If API offline, fall back to known values
+
     setStatEl('statBooks', '10,000');
     setStatEl('statUsers', '53,424');
     setStatEl('statRatings', '5.97M');
@@ -119,7 +110,6 @@ function formatNumber(n) {
   return String(n);
 }
 
-// ===== Demo Controls =====
 function initDemoControls() {
   const modelSelect = document.getElementById('modelSelect');
   const generateBtn = document.getElementById('generateBtn');
@@ -128,7 +118,6 @@ function initDemoControls() {
   generateBtn.addEventListener('click', fetchRecommendations);
   updateModelUI();
 
-  // Auto-load on start with hybrid model
   fetchRecommendations();
 }
 
@@ -157,7 +146,6 @@ function updateModelUI() {
   document.getElementById('resultsTitle').textContent = meta.label + ' Recommendations';
 }
 
-// ===== Fetch Recommendations =====
 async function fetchRecommendations() {
   const model = document.getElementById('modelSelect').value;
   const limit = Number(document.getElementById('limitSelect').value);
@@ -204,7 +192,6 @@ async function fetchRecommendations() {
   }
 }
 
-// ===== Render Results =====
 function renderResults(items, model) {
   const grid = document.getElementById('resultsGrid');
   const countEl = document.getElementById('resultsCount');
@@ -263,6 +250,9 @@ function buildScoresHTML(item, model) {
   if (item.content_score !== undefined && item.content_score !== null) {
     scores.push(`<span class="score-tag score-content">🔍 Content: ${item.content_score.toFixed(4)}</span>`);
   }
+  if (item.readability_score !== undefined && item.readability_score !== null) {
+    scores.push(`<span class="score-tag score-readability">📖 Readability: ${item.readability_score.toFixed(4)}</span>`);
+  }
   if (item.popularity_score !== undefined && item.popularity_score !== null) {
     scores.push(`<span class="score-tag score-pop">📊 Popularity: ${item.popularity_score.toFixed(4)}</span>`);
   }
@@ -279,7 +269,6 @@ function buildScoresHTML(item, model) {
   return scores.length > 0 ? `<div class="score-grid">${scores.join('')}</div>` : '';
 }
 
-// ===== Evaluation Table =====
 let evalLoaded = false;
 
 async function loadEvaluationTable() {
@@ -288,20 +277,48 @@ async function loadEvaluationTable() {
   const tbody = document.getElementById('evalTableBody');
   if (!tbody) return;
 
-  // Try API stats first, then fall back to static CSV data
   try {
     const res = await fetch(`${BASE_URL}/stats`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
-      // API is running — use the known static eval results
-    }
-  } catch { /* silent */ }
 
-  // Hardcoded from actual evaluation_results.csv — these are the real values
+    }
+  } catch {  }
+
+  try {
+    const evalRes = await fetch(`${BASE_URL}/evaluation`, { signal: AbortSignal.timeout(5000) });
+    if (evalRes.ok) {
+      const rows = await evalRes.json();
+      const metricMap = { "precision@10": "precision", "recall@10": "recall", "ndcg@10": "ndcg", "hit_rate@10": "hitRate", "coverage": "coverage", "users_evaluated": "users" };
+      const evalData = rows.map(r => ({
+        model: r.model || r.Model || "",
+        precision: parseFloat(r["precision@10"] ?? r.precision) || 0,
+        recall: parseFloat(r["recall@10"] ?? r.recall) || 0,
+        ndcg: parseFloat(r["ndcg@10"] ?? r.ndcg) || 0,
+        hitRate: parseFloat(r["hit_rate@10"] ?? r.hitRate) || 0,
+        coverage: parseFloat(r.coverage) || 0,
+        users: parseInt(r.users_evaluated ?? r.users) || 0
+      }));
+      tbody.innerHTML = evalData.map(row => `
+    <tr>
+      <td><strong>${escapeHtml(row.model)}</strong></td>
+      <td>${row.precision.toFixed(4)}</td>
+      <td>${row.recall.toFixed(4)}</td>
+      <td>${row.ndcg.toFixed(4)}</td>
+      <td>${row.hitRate.toFixed(3)}</td>
+      <td>${row.coverage.toFixed(4)}</td>
+      <td>${row.users}</td>
+    </tr>
+  `).join('');
+      evalLoaded = true;
+      return;
+    }
+  } catch {  }
+
   const evalData = [
-    { model: 'Popularity-Based',       precision: 0.0000, recall: 0.0000, ndcg: 0.0000, hitRate: 0.000, coverage: 0.0010, users: 500 },
-    { model: 'Content-Based',          precision: 0.0012, recall: 0.0120, ndcg: 0.0064, hitRate: 0.012, coverage: 0.1440, users: 500 },
-    { model: 'Collaborative Filtering',precision: 0.0000, recall: 0.0000, ndcg: 0.0000, hitRate: 0.000, coverage: 0.0673, users: 500 },
-    { model: 'Hybrid',                 precision: 0.0000, recall: 0.0000, ndcg: 0.0000, hitRate: 0.000, coverage: 0.0878, users: 500 }
+    { model: 'Popularity-Based',        precision: 0.0000, recall: 0.0000, ndcg: 0.0000, hitRate: 0.0000, coverage: 0.0033, users: 500 },
+    { model: 'Content-Based',           precision: 0.0020, recall: 0.0200, ndcg: 0.0150, hitRate: 0.0200, coverage: 0.1572, users: 500 },
+    { model: 'Collaborative Filtering', precision: 0.0056, recall: 0.0560, ndcg: 0.0247, hitRate: 0.0560, coverage: 0.0665, users: 500 },
+    { model: 'Hybrid',                  precision: 0.0052, recall: 0.0520, ndcg: 0.0234, hitRate: 0.0520, coverage: 0.0968, users: 500 }
   ];
 
   tbody.innerHTML = evalData.map(row => `
@@ -319,7 +336,6 @@ async function loadEvaluationTable() {
   evalLoaded = true;
 }
 
-// ===== UI Helpers =====
 function showLoadingState(show) {
   document.getElementById('resultsLoading').classList.toggle('hidden', !show);
   document.getElementById('generateBtn').disabled = show;

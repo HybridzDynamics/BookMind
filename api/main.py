@@ -1,16 +1,3 @@
-"""
-BookMind Recommendation API.
-
-This module provides a FastAPI REST API exposing recommendation endpoints:
-- GET /: Service metadata, status, and API documentation link.
-- GET /health: Health probe for service monitoring.
-- GET /recommendations/popular: Top popular books by Bayesian weighted score.
-- GET /recommendations/content/{book_id}: Content-similar books.
-- GET /recommendations/collaborative/{user_id}: Personalized collaborative recommendations.
-- GET /recommendations/hybrid/{user_id}: Ensemble hybrid recommendations with cold-start fallback.
-
-Note: Strictly functional implementation using only `def` functions (no `class`).
-"""
 
 import sys
 from pathlib import Path
@@ -40,19 +27,6 @@ app = FastAPI(
 
 
 def validate_limit_parameter(limit_value: int) -> None:
-    """
-    Validate that the requested recommendation limit is within [1, 100].
-
-    Parameters
-    ----------
-    limit_value : int
-        Number of items requested.
-
-    Raises
-    ------
-    HTTPException
-        If the limit is less than 1 or greater than 100.
-    """
     if limit_value < 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -67,9 +41,6 @@ def validate_limit_parameter(limit_value: int) -> None:
 
 @app.get("/", tags=["General"], summary="Service overview")
 def get_service_root() -> Dict[str, str]:
-    """
-    Provide basic metadata about the BookMind service.
-    """
     result = {
         "service": "BookMind",
         "status": "running",
@@ -81,9 +52,6 @@ def get_service_root() -> Dict[str, str]:
 
 @app.get("/health", tags=["General"], summary="Health check probe")
 def get_health_status() -> Dict[str, str]:
-    """
-    Check if the service is alive and healthy.
-    """
     result = {
         "status": "healthy"
     }
@@ -92,10 +60,6 @@ def get_health_status() -> Dict[str, str]:
 
 @app.get("/stats", tags=["General"], summary="Dataset and model statistics")
 def get_statistics() -> Dict[str, Any]:
-    """
-    Return dataset statistics and trained model metadata.
-    Reads from models/model_metadata.json if available.
-    """
     if METADATA_PATH.exists():
         try:
             with open(METADATA_PATH, "r", encoding="utf-8") as fh:
@@ -117,7 +81,12 @@ def get_statistics() -> Dict[str, Any]:
         "users": 0,
         "ratings": 0,
         "models": 4,
-        "hybrid_weights": {"collaborative": 0.40, "content": 0.35, "popularity": 0.25},
+        "hybrid_weights": {
+            "collaborative": 0.35,
+            "content": 0.30,
+            "readability": 0.15,
+            "popularity": 0.20
+        },
         "trained_at": "unknown",
         "model_version": "1.0.0"
     }
@@ -125,9 +94,6 @@ def get_statistics() -> Dict[str, Any]:
 
 @app.get("/recommendations/popular", tags=["Recommendations"], summary="Get popular books")
 def get_popular_recommendations(limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    Retrieve top popular books ranked by Bayesian popularity score.
-    """
     validate_limit_parameter(limit)
 
     try:
@@ -159,9 +125,6 @@ def get_popular_recommendations(limit: int = 10) -> List[Dict[str, Any]]:
 
 @app.get("/recommendations/content/{book_id}", tags=["Recommendations"], summary="Get content-similar books")
 def get_content_recommendations(book_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    Retrieve books with content similar to the target book ID.
-    """
     validate_limit_parameter(limit)
 
     try:
@@ -186,10 +149,6 @@ def get_content_recommendations(book_id: str, limit: int = 10) -> List[Dict[str,
 
 @app.get("/recommendations/collaborative/{user_id}", tags=["Recommendations"], summary="Get collaborative recommendations")
 def get_collaborative_recommendations_endpoint(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    Retrieve collaborative filtering recommendations for a user.
-    Falls back gracefully to popularity recommendations for unknown users (cold start).
-    """
     validate_limit_parameter(limit)
 
     try:
@@ -209,10 +168,6 @@ def get_collaborative_recommendations_endpoint(user_id: str, limit: int = 10) ->
 
 @app.get("/recommendations/hybrid/{user_id}", tags=["Recommendations"], summary="Get hybrid recommendations")
 def get_hybrid_recommendations_endpoint(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    Retrieve hybrid ensemble recommendations for a user.
-    Falls back gracefully to popularity recommendations for unknown users (cold start).
-    """
     validate_limit_parameter(limit)
 
     try:
@@ -227,4 +182,25 @@ def get_hybrid_recommendations_endpoint(user_id: str, limit: int = 10) -> List[D
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(general_error)}"
+        )
+
+
+@app.get("/evaluation", tags=["General"], summary="Get model evaluation metrics")
+def get_evaluation_results() -> List[Dict[str, Any]]:
+    import csv as _csv
+    eval_csv_path = PROJECT_ROOT / "data" / "processed" / "evaluation_results.csv"
+    if not eval_csv_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evaluation results not available. Run the evaluation pipeline first."
+        )
+    try:
+        with open(eval_csv_path, "r", encoding="utf-8", newline="") as csv_file:
+            reader = _csv.DictReader(csv_file)
+            rows = [dict(row) for row in reader]
+        return rows
+    except Exception as eval_error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to read evaluation results: {str(eval_error)}"
         )

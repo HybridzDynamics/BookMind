@@ -58,8 +58,6 @@ models/*.pkl
 
 # Generated reports
 reports/
-# Local datasets and generated data
-data/git restore .
 
 # Trained models
 models/

@@ -1,17 +1,5 @@
-"""
-BookMind Collaborative Filtering Recommendation Model.
-
-This module implements Matrix Factorization collaborative filtering using
-scikit-learn's TruncatedSVD. A sparse user-item interaction matrix is constructed
-from ratings, and decomposed into lower-dimensional user and book latent factors.
-Recommendations are produced by taking the dot product of latent representations,
-filtering out already-rated books, enforcing author diversity, and handling
-new/unseen users gracefully via cold-start fallback.
-
-Note: Strictly functional implementation using only `def` functions (no `class`).
-"""
-
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 import joblib
@@ -38,32 +26,6 @@ def train_collaborative_model(
     model_output_path: Path = COLLABORATIVE_MODEL_PATH,
     latent_factors: int = 50
 ) -> Dict[str, Any]:
-    """
-    Train a TruncatedSVD collaborative filtering model from user ratings.
-
-    Parameters
-    ----------
-    ratings_path : Path
-        Path to `user_ratings.csv`.
-    clean_books_path : Path
-        Path to `books_clean.csv`.
-    model_output_path : Path
-        Path where the serialized model artifact will be saved.
-    latent_factors : int, default=50
-        Number of latent dimensions to compute for matrix decomposition.
-
-    Returns
-    -------
-    dict
-        Model dictionary containing factors, index mappings, ratings, and book metadata.
-
-    Raises
-    ------
-    FileNotFoundError
-        If ratings or books CSV files are not found.
-    ValueError
-        If the interaction matrix is too small for factorization.
-    """
     if not ratings_path.exists():
         error_message = f"Ratings file not found at: {ratings_path}. Run prepare_ratings.py first."
         raise FileNotFoundError(error_message)
@@ -93,7 +55,6 @@ def train_collaborative_model(
     unique_users = deduplicated_ratings["user_id"].unique().tolist()
     unique_books = deduplicated_ratings["book_id"].unique().tolist()
 
-    # Build index mappings explicitly without dict comprehensions
     user_to_index = {}
     for user_index, user_id in enumerate(unique_users):
         user_to_index[user_id] = user_index
@@ -126,11 +87,12 @@ def train_collaborative_model(
 
     print(f"Training TruncatedSVD with {components_count} components on matrix shape {interaction_shape}...")
     svd_model = TruncatedSVD(n_components=components_count, random_state=42)
-    user_factors = svd_model.fit_transform(interaction_matrix)
-    book_factors = svd_model.components_.T
+    user_factors = svd_model.fit_transform(interaction_matrix).astype(np.float32)
+    book_factors = svd_model.components_.T.astype(np.float32)
+    user_item_matrix = interaction_matrix.astype(np.float32)
 
     model_artifacts = {
-        "ratings": deduplicated_ratings,
+        "user_item_matrix": user_item_matrix,
         "books": books_dataframe,
         "user_ids": unique_users,
         "book_ids": unique_books,
@@ -148,28 +110,12 @@ def train_collaborative_model(
     print(f"Collaborative model saved to: {model_output_path}")
     print(f"Stats: Number of users = {total_users_count:,}, Number of books = {total_books_count:,}, Number of ratings = {total_ratings:,}, Number of SVD factors = {components_count}")
 
+    load_collaborative_model.cache_clear()
     return model_artifacts
 
 
+@lru_cache(maxsize=4)
 def load_collaborative_model(model_path: Path = COLLABORATIVE_MODEL_PATH) -> Dict[str, Any]:
-    """
-    Load the serialized collaborative filtering model from disk.
-
-    Parameters
-    ----------
-    model_path : Path
-        Path to `collaborative_model.pkl`.
-
-    Returns
-    -------
-    dict
-        The loaded collaborative model artifacts.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the model file does not exist.
-    """
     if not model_path.exists():
         error_message = f"Collaborative model not found at: {model_path}. Run train_collaborative_model() first."
         raise FileNotFoundError(error_message)
@@ -184,33 +130,11 @@ def recommend_for_user(
     max_books_per_author: int = 2,
     model_path: Path = COLLABORATIVE_MODEL_PATH
 ) -> List[Dict[str, Any]]:
-    """
-    Generate collaborative filtering recommendations for a user.
-    If user_id is unknown or new (cold-start), falls back to popularity recommendations.
-    Applies author diversity (max 2 books per author).
-
-    Parameters
-    ----------
-    user_id : str
-        The unique user identifier.
-    number_of_books : int, default=10
-        Number of recommendations to return.
-    max_books_per_author : int, default=2
-        Maximum allowed books per author in the recommendation list.
-    model_path : Path
-        Path to the serialized collaborative model.
-
-    Returns
-    -------
-    list of dict
-        Top recommended books with predicted scores and explanation reasons.
-    """
     target_user_id = str(user_id).strip()
     model = load_collaborative_model(model_path)
 
     user_to_index = model["user_to_index"]
 
-    # Cold-start fallback: Unknown user or user without training ratings
     if target_user_id not in user_to_index:
         popular_df = get_popular_books(number_of_books=number_of_books)
         fallback_list = []
@@ -239,18 +163,21 @@ def recommend_for_user(
     target_user_factor = model["user_factors"][user_internal_index]
     book_factors = model["book_factors"]
 
-    # Compute predicted score for each book in the model
     predicted_scores = np.dot(target_user_factor, book_factors.T)
-
-    # Collect books the user has already rated so we exclude them
-    ratings_dataframe = model["ratings"]
-    user_rating_rows = ratings_dataframe[ratings_dataframe["user_id"] == target_user_id]
-    already_rated_book_ids = set(user_rating_rows["book_id"].astype(str).unique())
 
     books_dataframe = model["books"]
     book_ids_list = model["book_ids"]
 
-    # Sort book indices by predicted score descending
+    if "user_item_matrix" in model:
+        user_matrix_row = model["user_item_matrix"][user_internal_index]
+        already_rated_book_ids = set()
+        for rated_column_index in user_matrix_row.indices:
+            already_rated_book_ids.add(str(book_ids_list[rated_column_index]))
+    else:
+        ratings_dataframe = model["ratings"]
+        user_rating_rows = ratings_dataframe[ratings_dataframe["user_id"] == target_user_id]
+        already_rated_book_ids = set(user_rating_rows["book_id"].astype(str).unique())
+
     sorted_candidate_indices = np.argsort(predicted_scores)
     sorted_candidate_indices = sorted_candidate_indices[::-1]
 
@@ -270,7 +197,6 @@ def recommend_for_user(
         book_row = matching_rows.iloc[0]
         author_name = str(book_row["author"]).strip()
 
-        # Enforce author diversity
         current_author_count = author_counts_tracker.get(author_name, 0)
         if current_author_count >= max_books_per_author:
             continue

@@ -1,9 +1,3 @@
-"""
-Pytest configuration and environment fixtures for BookMind test suite.
-
-Ensures the project root directory is present in sys.path during test execution.
-Note: Strictly functional implementation using only `def` (no `class`).
-"""
 
 import sys
 from pathlib import Path

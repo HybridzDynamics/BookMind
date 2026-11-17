@@ -1,20 +1,3 @@
-"""
-BookMind Report Graphs Generator Module.
-
-This module generates all nine required report charts and visualizations:
-1. `rating_distribution.png`: Frequency of ratings from 1 to 5 stars.
-2. `user_activity_distribution.png`: Histogram / log-distribution of ratings per user.
-3. `book_activity_distribution.png`: Distribution of ratings received per book.
-4. `top_popular_books.png`: Horizontal bar chart of top 10 popular books.
-5. `model_performance_comparison.png`: Bar comparison across all recommendation models.
-6. `precision_10.png`: Model comparison for Precision@10.
-7. `recall_10.png`: Model comparison for Recall@10.
-8. `ndcg_10.png`: Model comparison for NDCG@10.
-9. `hybrid_weights.png`: Donut / pie chart showing hybrid component weights.
-
-Note: Strictly functional implementation using only `def` functions (no `class`).
-"""
-
 from pathlib import Path
 import joblib
 import matplotlib.pyplot as plt
@@ -29,21 +12,6 @@ REPORTS_DIRECTORY = PROJECT_ROOT / "reports"
 
 
 def save_active_plot(figure_filename: str, destination_folder: Path = REPORTS_DIRECTORY) -> Path:
-    """
-    Save the active matplotlib figure with high resolution and close it.
-
-    Parameters
-    ----------
-    figure_filename : str
-        Target image file name.
-    destination_folder : Path
-        Folder where the image will be written.
-
-    Returns
-    -------
-    Path
-        Absolute path to the saved image file.
-    """
     destination_folder.mkdir(parents=True, exist_ok=True)
     destination_path = destination_folder / figure_filename
 
@@ -59,9 +27,6 @@ def plot_rating_distribution(
     ratings_path: Path = USER_RATINGS_PATH,
     reports_folder: Path = REPORTS_DIRECTORY
 ) -> None:
-    """
-    Generate `rating_distribution.png`.
-    """
     if not ratings_path.exists():
         return
 
@@ -83,9 +48,6 @@ def plot_user_activity_distribution(
     ratings_path: Path = USER_RATINGS_PATH,
     reports_folder: Path = REPORTS_DIRECTORY
 ) -> None:
-    """
-    Generate `user_activity_distribution.png`: Number of ratings per user.
-    """
     if not ratings_path.exists():
         return
 
@@ -106,9 +68,6 @@ def plot_book_activity_distribution(
     ratings_path: Path = USER_RATINGS_PATH,
     reports_folder: Path = REPORTS_DIRECTORY
 ) -> None:
-    """
-    Generate `book_activity_distribution.png`: Number of ratings received per book.
-    """
     if not ratings_path.exists():
         return
 
@@ -130,9 +89,6 @@ def plot_top_popular_books(
     reports_folder: Path = REPORTS_DIRECTORY,
     top_n: int = 10
 ) -> None:
-    """
-    Generate `top_popular_books.png`.
-    """
     if not popularity_model_path.exists():
         return
 
@@ -141,11 +97,11 @@ def plot_top_popular_books(
 
     truncated_titles = []
     for title in top_subset["title"]:
-        t_str = str(title)
-        if len(t_str) > 35:
-            truncated_titles.append(t_str[:32] + "...")
+        title_text = str(title)
+        if len(title_text) > 35:
+            truncated_titles.append(title_text[:32] + "...")
         else:
-            truncated_titles.append(t_str)
+            truncated_titles.append(title_text)
 
     plt.figure(figsize=(10, 6))
     plt.barh(truncated_titles, top_subset["popularity_score"], color="#DD6B20", edgecolor="#7B341E")
@@ -158,12 +114,14 @@ def plot_top_popular_books(
 
 
 def plot_hybrid_weights(reports_folder: Path = REPORTS_DIRECTORY) -> None:
-    """
-    Generate `hybrid_weights.png`: Donut chart showing the hybrid component weight split.
-    """
-    labels = ["Collaborative Filtering (40%)", "Content-Based (35%)", "Popularity Prior (25%)"]
-    weights = [0.40, 0.35, 0.25]
-    colors = ["#3182CE", "#38A169", "#DD6B20"]
+    labels = [
+        "Collaborative Filtering (35%)",
+        "Content-Based (30%)",
+        "Readability Match (15%)",
+        "Popularity (20%)"
+    ]
+    weights = [0.35, 0.30, 0.15, 0.20]
+    colors = ["#3182CE", "#38A169", "#DD6B20", "#805AD5"]
 
     plt.figure(figsize=(7, 7))
     plt.pie(
@@ -183,9 +141,6 @@ def plot_model_evaluation_metrics(
     evaluation_path: Path = EVALUATION_RESULTS_PATH,
     reports_folder: Path = REPORTS_DIRECTORY
 ) -> None:
-    """
-    Generate `model_performance_comparison.png`, `precision_10.png`, `recall_10.png`, and `ndcg_10.png`.
-    """
     if not evaluation_path.exists():
         return
 
@@ -194,45 +149,48 @@ def plot_model_evaluation_metrics(
         return
 
     indexed_results = results_df.set_index("model")
-    metric_cols = ["precision@10", "recall@10", "ndcg@10"]
+    ranking_metric_cols = ["precision@10", "recall@10", "ndcg@10", "hit_rate@10"]
+    metric_cols = ranking_metric_cols + ["coverage"]
 
-    available_metrics = []
-    for col in metric_cols:
-        if col in indexed_results.columns:
-            available_metrics.append(col)
+    available_ranking_metrics = [
+        col for col in ranking_metric_cols if col in indexed_results.columns
+    ]
+    available_metrics = [col for col in metric_cols if col in indexed_results.columns]
 
     if len(available_metrics) == 0:
         return
 
-    # Combined performance chart
-    plt.figure(figsize=(10, 6))
-    indexed_results[available_metrics].plot.bar(figsize=(10, 6), edgecolor="black", width=0.7)
-    plt.title("Recommendation Models Performance Comparison", fontsize=14, fontweight="bold", pad=12)
-    plt.xlabel("Recommendation Model", fontsize=12)
-    plt.ylabel("Score", fontsize=12)
-    plt.ylim(0.0, 1.0)
-    plt.grid(axis="y", linestyle="--", alpha=0.5)
-    plt.legend(["Precision@10", "Recall@10", "NDCG@10"])
+    if len(available_ranking_metrics) > 0:
+        ranking_max = float(indexed_results[available_ranking_metrics].to_numpy().max())
+        plt.figure(figsize=(10, 6))
+        indexed_results[available_ranking_metrics].plot.bar(edgecolor="black", width=0.7)
+        plt.title("Recommendation Models Performance Comparison", fontsize=14, fontweight="bold", pad=12)
+        plt.xlabel("Recommendation Model", fontsize=12)
+        plt.ylabel("Score", fontsize=12)
+        plt.ylim(0.0, max(0.01, ranking_max * 1.15))
+        plt.grid(axis="y", linestyle="--", alpha=0.5)
+        plt.legend([metric.upper().replace("@", " @ ") for metric in available_ranking_metrics])
+        save_active_plot("model_performance_comparison.png", reports_folder)
 
-    save_active_plot("model_performance_comparison.png", reports_folder)
-
-    # Individual charts
     metric_colors = {
         "precision@10": "#2C7A7B",
         "recall@10": "#805AD5",
-        "ndcg@10": "#C53030"
+        "ndcg@10": "#C53030",
+        "hit_rate@10": "#2F855A",
+        "coverage": "#B7791F"
     }
 
     for metric_name in available_metrics:
         plt.figure(figsize=(8, 5))
         plot_color = metric_colors.get(metric_name, "#4A5568")
+        metric_max = float(indexed_results[metric_name].max())
 
         indexed_results[metric_name].plot.bar(color=plot_color, edgecolor="black", width=0.5)
         clean_title = metric_name.upper().replace("@", " @ ")
         plt.title(f"Model Comparison: {clean_title}", fontsize=14, fontweight="bold", pad=12)
         plt.xlabel("Model Architecture", fontsize=12)
         plt.ylabel("Score", fontsize=12)
-        plt.ylim(0.0, 1.0)
+        plt.ylim(0.0, max(0.01, metric_max * 1.15))
         plt.grid(axis="y", linestyle="--", alpha=0.5)
 
         safe_filename = metric_name.replace("@", "_") + ".png"
@@ -240,16 +198,8 @@ def plot_model_evaluation_metrics(
 
 
 def generate_all_report_graphs(reports_folder: Path = REPORTS_DIRECTORY) -> None:
-    """
-    Run all 9 graph generation routines.
-
-    Parameters
-    ----------
-    reports_folder : Path
-        Target directory to store output images.
-    """
     reports_folder.mkdir(parents=True, exist_ok=True)
-    print(f"Generating all 9 report visualization figures into: {reports_folder}")
+    print(f"Generating all 11 report visualization figures into: {reports_folder}")
 
     plot_rating_distribution(reports_folder=reports_folder)
     plot_user_activity_distribution(reports_folder=reports_folder)
